@@ -1,0 +1,14 @@
+first_name,last_name,id,url,arg,Occupation score,Occupation score adjusted,Colby score,confidence,label,time,moved
+Alexandros,Aldous,b'1067',https://weekherald.com/2018/05/24/alexandros-aldous-sells-10905-shares-of-chefs-warehouse-inc-chef-stock.html,0.0,20.0,0.9523809523809523,0.0,0.9995815294995914,1,2018-08-14 21:57:46,True
+Bill,Cotter,b'1066',https://www.pressherald.com/2018/03/12/colby-college-arts-center-gets-2-million-gift/,0.0,26.0,6.5,5.0,1.0,1,2018-08-14 21:57:47,True
+Bill,Cotter,b'1065',https://www.colby.edu/news/2018/03/07/colby-secures-2-million-commitment-for-contemporary-gallery-in-downtown-arts-center/,0.0,23.0,5.75,7.0,1.0,1,2018-08-14 21:57:48,True
+Alexandros,Aldous,b'1038',https://macondaily.com/2018/05/14/chefs-warehouse-chef-given-a-29-00-price-target-by-bmo-capital-markets-analysts.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:57:49,True
+Alexandros,Aldous,b'1037',https://registrarjournal.com/2018/05/14/chefs-warehouse-inc-chef-general-counsel-alexandros-aldous-sells-10905-shares.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:57:50,True
+Alexandros,Aldous,b'1037',https://macondaily.com/2018/05/15/chefs-warehouse-inc-chef-position-increased-by-atria-investments-llc.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:57:50,True
+Alexandros,Aldous,b'1036',https://weekherald.com/2018/05/16/alexandros-aldous-sells-10905-shares-of-chefs-warehouse-inc-chef-stock.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:57:51,True
+Alexandros,Aldous,b'1035',https://www.thelincolnianonline.com/2018/05/16/chefs-warehouse-chef-releases-fy18-earnings-guidance.html,0.0,40.0,1.9047619047619047,0.0,0.9999999932679882,1,2018-08-14 21:57:52,True
+Alexandros,Aldous,b'1034',https://macondaily.com/2018/05/19/chefs-warehouse-chef-pt-raised-to-29-00-updated.html,0.0,40.0,1.9047619047619047,0.0,0.9999999932679882,1,2018-08-14 21:57:52,True
+Alexandros,Aldous,b'1032',https://stocknewstimes.com/2018/05/21/deutsche-bank-ag-grows-holdings-in-chefs-warehouse-inc-chef.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:57:53,True
+Alexandros,Aldous,b'1032',https://macondaily.com/2018/05/22/kayne-anderson-rudnick-investment-management-llc-sells-184518-shares-of-chefs-warehouse-inc-chef.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:57:54,True
+Alexandros,Aldous,b'1031',https://registrarjournal.com/2018/05/22/chefs-warehouse-inc-chef-general-counsel-alexandros-aldous-sells-10905-shares.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:57:55,True
+Janice,Griffith,b'1030',http://www.wm.edu/news/stories/2018/wife-honors-late-husbands-legacy-with-1-million-gift.php,0.0,9.0,1.125,0.0,0.9969725115623257,1,2018-08-14 21:57:56,True

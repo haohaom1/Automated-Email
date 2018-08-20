@@ -1,0 +1,10 @@
+first_name,last_name,id,url,arg,Occupation score,Occupation score adjusted,Colby score,confidence,label,time,moved
+Bill,Cotter,b'1056',https://www.colby.edu/news/2018/03/07/colby-secures-2-million-commitment-for-contemporary-gallery-in-downtown-arts-center/,0.0,23.0,5.75,7.0,1.0,1,2018-08-14 21:48:30,True
+Bill,Cotter,b'1055',https://www.pressherald.com/2018/03/12/colby-college-arts-center-gets-2-million-gift/,0.0,26.0,6.5,5.0,1.0,1,2018-08-14 21:48:31,True
+Alexandros,Aldous,b'1053',https://weekherald.com/2018/05/24/alexandros-aldous-sells-10905-shares-of-chefs-warehouse-inc-chef-stock.html,0.0,20.0,0.9523809523809523,0.0,0.9995815294995914,1,2018-08-14 21:48:32,True
+Alexandros,Aldous,b'1050',https://www.thelincolnianonline.com/2018/04/30/chefs-warehouse-chef-shares-sold-by-rhumbline-advisers.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:48:34,True
+Alexandros,Aldous,b'1046',https://macondaily.com/2018/05/05/chefs-warehouse-chef-scheduled-to-post-quarterly-earnings-on-monday.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:48:35,True
+Alexandros,Aldous,b'1045',https://macondaily.com/2018/05/06/metlife-investment-advisors-llc-invests-176000-in-chefs-warehouse-inc-chef.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:48:35,True
+Alexandros,Aldous,b'1044',https://registrarjournal.com/2018/05/08/chefs-warehouse-inc-chef-general-counsel-alexandros-aldous-sells-10905-shares.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:48:36,True
+Alexandros,Aldous,b'1043',https://weekherald.com/2018/05/09/alexandros-aldous-sells-10905-shares-of-chefs-warehouse-inc-chef-stock.html,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-14 21:48:37,True
+Alexandros,Aldous,b'1042',https://registrarjournal.com/2018/05/09/chefs-warehouse-chef-position-lowered-by-macquarie-group-ltd.html,0.0,40.0,1.9047619047619047,0.0,0.9999999932679882,1,2018-08-14 21:48:38,True

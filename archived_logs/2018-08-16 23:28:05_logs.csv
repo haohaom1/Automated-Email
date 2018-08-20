@@ -1,0 +1,5 @@
+first_name,last_name,id,url,arg,Occupation score,Occupation score adjusted,Colby score,confidence,label,time,moved
+Andrew,Davis,b'1395',https://www.mcdowellnews.com/sports/work-week-morgan-happy-with-titans-efforts-during-first-week/article_e9d144a8-9749-11e8-802a-53dc90b54eca.html,0.0,1.0,0.058823529411764705,0.0,0.9334996754624938,0,2018-08-16 23:28:02,True
+Michael,Gordon,b'1394',https://www.tvnz.co.nz/one-news/sport/league/parramatta-eels-win-over-titans-boost-hopes-avoiding-nrl-wooden-spoon,0.0,2.0,0.13333333333333333,0.0,0.8734638703090208,0,2018-08-16 23:28:04,True
+Michael,Gordon,b'1394',http://leagueunlimited.com/news/32317-results-2018-national-rugby-league-round-21/,0.0,1.0,0.06666666666666667,0.0,0.9305830170261243,0,2018-08-16 23:28:04,True
+Jessica,Stanton,b'1392',https://www.plymouthherald.co.uk/news/local-news/pub-live-stream-bat-cam-1893361,0.0,0.0,0.0,0.0,0.9630101568145125,0,2018-08-16 23:28:05,True
