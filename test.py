@@ -19,8 +19,8 @@ import os
 #%%
 
 import pandas as pd
-df = pd.read_csv('logs/2018-08-16 23:42:13_logs.csv')
-
+# df = pd.read_csv('logs/2018-08-16 23:42:13_logs.csv')
+df = pd.read_csv('logs/2018-08-24 15:01:02_logs.csv')
 #%%
 
 df1 = df.reset_index().set_index(['index', 'id'])
@@ -49,7 +49,7 @@ mail = reader.login_email(username, password)
 
 
 clf = joblib.load('Classifiers/LR_7_30.pkl')
-df1 = classifier.classify_mails(mail, classifier=clf, folder='Priority Mail',
+df1 = classifier.classify_mails(mail, clf=clf, folder='Priority Mail',
                                 cap_at=10, log_data=True, to_raiser=False, move=True)
 
 #%%

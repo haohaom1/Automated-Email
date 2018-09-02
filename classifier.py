@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.externals import joblib
 
 from scraper import Scraper
 from emailreader import Emailreader
@@ -95,23 +96,28 @@ def classify_mails_from_data(mail, df, folder, labels=None, uids=None,
     return df
 
 
-def classify_mails(mail, classifier, folder, cap_at=None, latest_first=True, threshold=0.85,
-                   log_data=False, to_raiser=False, move=False, split_up_links=True):
+def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, threshold=0.85,
+                   log_data=False, to_raiser=False, log_filename=False,
+                   move=True, split_up_links=True):
     '''
     Iterates through emails from a given folder, and moves it accordingly
 
-    :param mail: The IMAP mail object. Must be loggged in, and contains the Completed and Received Folders
-    :param classifier: The classifier used to classifiy emails
+    :param mail: The IMAP mail object. Must be logged in, and contains the Completed and Received Folders
     :param folder: name of folder for emails
+    :param clf: The classifier used to classify emails
     :param cap_at: How many mails to read
     :param latest_first: Whether or not to read the latest emails first
     :param threshold: The confidence threshold for a decision to be made. Defaulted to 0.9
     :param to_raiser: Whether or not to create a csv to be used to record in to Raiser's Edge Database
+    :param log_filename: Whether or not to return a path to the filename of the logs
+    :param split_up_links: Whether or not to split up the list links that are in the same email
     :return: dataframe containing UID of the emails, Scores, probability,
     and confidence, decision, and timestamp, constituent info, sorted by confidence,
     '''
 
-    clf = classifier
+    if not clf:
+        clf = joblib.load('Classifiers/LR_7_30.pkl')
+
     mails_df = reader.get_emails_from_folder(mail, folder_name=folder, latest_first=latest_first, cap_at=cap_at)
     links = reader.get_links(mails_df)
 
@@ -151,20 +157,23 @@ def classify_mails(mail, classifier, folder, cap_at=None, latest_first=True, thr
 
     # logs the data
     if log_data:
-        moved_df = df[df['moved']]
+        # moved_df = df[df['moved']]
 
         # logs the data if the dataframe is not empty
-        if not moved_df.empty:
+        if not df.empty:
             date = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
 
             # saves to the logs
-            moved_df.to_csv('logs/{}_logs.csv'.format(date), index=False)
+            df.to_csv('logs/{}_logs.csv'.format(date), index=False)
 
 
             # if to_raiser is true AND there is an available data from logs, then return the data to be
             # exported to Raisers edge as well
             if to_raiser:
                 return df, create_csv_for_raiser('logs/{}_logs.csv'.format(date))
+
+            if log_filename:
+                return df, '{}_logs.csv'.format(date)
 
     return df
 

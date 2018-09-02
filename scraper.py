@@ -247,7 +247,7 @@ class Scraper:
         urls = []
 
         for i in range(len(df)):
-            print('processing row {}'.format(i))
+            print('processing link {}'.format(i))
 
             test_data = df.iloc[i]
             mdf = self.create_matched_df(test_data['first_name'], test_data['last_name'])

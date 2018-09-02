@@ -12,7 +12,6 @@
 TO DO LIST
 
 - implement the dialog box for classify emails
-- finish the table that shows scores
 - Need ID for constituent
 
 IDEAS FOR FUTURE
@@ -31,6 +30,7 @@ import textwrap
 
 import pandas as pd
 import numpy as np
+from sklearn.externals import joblib
 
 from datetime import datetime
 
@@ -45,8 +45,12 @@ from emailreader import Emailreader
 
 scraper = Scraper()
 reader = Emailreader()
+username = 'prospectstudent@colby.edu'
+password = 'Student.2017'
+mail = reader.login_email(username, password)
 
 import os
+import shutil
 
 # create a class to build and manage the display
 class DisplayApp:
@@ -179,14 +183,35 @@ class DisplayApp:
 
         # for when the bottom table is selected
         elif w == self.tree:
-            curItem = self.tree.focus()
-            print(self.tree.item(curItem))
-
             self.refreshFrame(self.rightmainframe)
-            tk.Button(self.rightmainframe, text='Added Label').pack()
+
+            curItem = self.tree.focus()
+            row_num = self.tree.item(curItem)['text']
+            scores = self.df[['Occupation score', 'Occupation score adjusted', 'Colby score']].iloc[row_num]
+
+            # print(self.tree.item(curItem))
+
+            scores_tree = ttk.Treeview(self.rightmainframe, height=1)
+
+            # makes the identifier smaller
+            scores_tree['show'] = 'headings'
+
+            n = len(scores.index)
+            scores_tree["columns"] = tuple(range(n))
+
+            # sets the column headers
+            for i, col in enumerate(scores.index):
+                scores_tree.column(i, width=100, stretch=True, anchor='center')
+                scores_tree.heading(i, text=col)
+
+            scores_tree.insert('', 0, values=tuple(scores.values))
+
+            scores_tree.pack(side=tk.TOP)
+
 
 
     # build a frame and put controls in it
+    # CURRENTLY NOT BEING USED
     def buildLeftPanel(self):
 
         '''
@@ -247,10 +272,12 @@ class DisplayApp:
         label.pack(side=tk.TOP, pady=10)
 
         # Makes the buttons on the right control frame:
-        commands = [None, self.handleViewScore, self.handleConfidence, self.handleDisplayCSV,
-                    None]  # the command tied to each button
+        commands = [self.handleClassifyEmails, self.handleViewScore,
+                    self.handleConfidence, self.handleDisplayCSV,
+                    self.handleArchive]  # the command tied to each button
 
-        texts = ['Classify\nEmails', 'View Scores', 'Confidence\nLevels', 'Raiser CSV',
+        texts = ['Classify\nEmails', 'View Scores',
+                 'Confidence\nLevels', 'Raiser CSV',
                  'Archive Logs']     # Classify emails will bring up a pop menu that determines
                                                                       # how many emails to classify
 
@@ -266,8 +293,6 @@ class DisplayApp:
             if filename.endswith('csv'):
                 self.logs_lbox.insert(tk.END, filename)
         self.logs_lbox.pack(side=tk.TOP, pady=10)
-
-        # binds listbox select to the listbox
 
 
     def buildMainPanel(self):
@@ -287,9 +312,9 @@ class DisplayApp:
         # builds tree
         # self.buildBottomTable()
 
-        self.rightmainframe = tk.Frame(self.root, pady=10)
-        self.rightmainframe.pack(side=tk.RIGHT, fill=tk.Y, expand=1)
-        tk.Label(self.rightmainframe, text="", width=20)
+        self.rightmainframe = tk.Frame(self.root, pady=10, padx=5)
+        self.rightmainframe.pack(side=tk.RIGHT, fill=tk.Y, expand=0)
+        # tk.Label(self.rightmainframe, text="", width=20).pack()
 
         self.leftmainframe = tk.Frame(self.root, pady=10)
         self.leftmainframe.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
@@ -306,7 +331,6 @@ class DisplayApp:
     def buildBottomTable(self):
 
         if isinstance(self.df, pd.DataFrame):
-
 
             # delete previous tables, if ones exist
             self.refreshFrame(self.bottomFrame)
@@ -336,7 +360,7 @@ class DisplayApp:
                 self.tree.insert("", 3, "dir3", text="Dir 3", tags='shaded')
                 self.tree.insert("dir3", 3, text=" sub dir 3", values=("3A", " 3B"))
 
-            df = self.df.loc[:, ['id', 'time', 'first_name', 'last_name', 'confidence', 'label', 'text']]
+            df = self.df.loc[:, ['id', 'time', 'first_name', 'last_name', 'confidence', 'label', 'moved', 'text']]
 
             # formats a long string to make it display better
             def process_text(string, length=50, total_string_size=100):
@@ -477,6 +501,11 @@ class DisplayApp:
             return
 
         raiser_df = classifier.create_csv_for_raiser(logs=self.current_log, return_merged_df=False)
+
+        if raiser_df.empty:
+            # No available data
+            messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge')
+
         d = RaiserDialog(self.root, df=raiser_df, title='Raiser Edge CSV')
 
     def handleConfidence(self):
@@ -503,7 +532,40 @@ class DisplayApp:
         '''
         Classifies the emails and creates logs
         '''
+
+        d = ClassifyDialog(self.root, title='Classify Emails Automatically')
+
+        # adds the newest logs to
+        try:
+            self.logs_lbox.insert(0, d.filename)
+        except AttributeError:  # if the user pressed cancel
+            pass
+
         pass
+
+    def handleArchive(self):
+        '''
+        Archives the emails from the logs to the archived_logs
+        '''
+        # saves paths for the logs
+        filename = self.logs_lbox.get(self.logs_lbox.curselection()[0])
+        print('filename', filename)
+        current_path = 'logs/' + filename
+        new_path = 'archived_logs/' + filename
+        # move logs from logs/ to archived_logs/
+        shutil.move(current_path, new_path)
+
+        # deletes item from listbox
+        item = self.logs_lbox.curselection()
+        self.logs_lbox.delete(item)
+
+        # refreshes frames
+        for frame in self.leftmainframe, self.rightmainframe, self.bottomFrame:
+            self.refreshFrame(frame)
+
+        self.df = None
+        self.current_log = None
+
 
     # def handleButton1(self):
     #     print('handling command button:', self.colorOption.get())
@@ -660,7 +722,6 @@ class RaiserDialog(simpledialog.Dialog):
             if self.path.get()[-4:] == '.csv':
                 return True
             else:
-                # self.errorlabel.config(state=tk.NORMAL)
                 self.errorlabel.pack()
                 print('Please make sure the filename ends in .csv')
                 return False
@@ -676,10 +737,48 @@ class RaiserDialog(simpledialog.Dialog):
         self.df.to_csv(self.path.get(), index=False)
         print('downloaded at ', self.path.get())
 
-    # def ok(self, event=None):
-    #     super().ok()
+
+class ClassifyDialog(simpledialog.Dialog):
+
+    def __init__(self, parent, title='Title'):
+
+        self.folder = tk.StringVar(value='Priority Mail')
+        self.cap_at = tk.IntVar(value=0)
+        self.checked = tk.IntVar(value=1)
+
+        simpledialog.Dialog.__init__(self, parent, title)
+
+    def body(self, master):
+
+        folders = ('Priority Mail', 'INBOX')
+        tk.Label(master, text='Choose a Folder:').grid(row=0, column=0)
+        menu = tk.OptionMenu(master, self.folder, *folders)
+        menu.config(width=10)
+        menu.grid(row=0, column=1)
+
+        tk.Label(master, text='Classify How Many Emails:').grid(row=1, column=0)
+        tk.Entry(master, textvariable=self.cap_at).grid(row=1, column=1)
+
+        # tk.Label(master, text='Create Logs (Highly Recommended)').grid(row=2, column=0)
+        # checkbutton = tk.Checkbutton(master, text='Create Logs (Highly Recommended)',
+        #                              variable=self.checked)
+        # checkbutton.grid(row=2, column=1)
+
+    def validate(self):
+        if self.checked.get() > 0:
+            return True
+        else:
+            return False
 
 
+    def apply(self):
+        print('Classifying {} mails in the folder {}'.format(self.cap_at.get(), self.folder.get()))
+
+        _, self.filename = classifier.classify_mails(mail, folder=self.folder.get(),
+                                                     cap_at=self.cap_at.get(), log_data=True,
+                                                     to_raiser=False, log_filename=True,
+                                                     threshold=0.99)
+        print('logs saved at' + self.filename)
 
 
 if __name__ == "__main__":
