@@ -14,7 +14,7 @@ from sklearn.externals import joblib
 import classifier
 from datetime import datetime
 import os
-
+import warnings
 
 #%%
 
@@ -26,12 +26,38 @@ df = pd.read_csv('logs/2018-08-24 15:01:02_logs.csv')
 df1 = df.reset_index().set_index(['index', 'id'])
 
 #%%
-
+import string
+scraper.clean_words(['Clean this Sentealsdfkja #@32 ', 'hi@#', 'fhit'])
+'Asdf@#@'.lower().translate(str.maketrans('', '', string.punctuation))
+#%%
 # df = classifier.create_csv_for_raiser('logs/2018-08-14 21:57:57_logs.csv', return_merged_df=True)
 
 #%%
+scraper = Scraper()
+
+
+
+url = 'file:///Users/xfu21/Downloads/SampleTextFile_10kb.txt'
+urls = [[url, url],
+        [url],
+        ['asdf' + url, url]]
+
+urls_list = [url] * 3
+urls_list[0] = urls_list[0] + 'asd'
+
+
+df = pd.DataFrame(urls_list, columns=['urls_list'])
+df['urls'] = urls
+
+df['urls_words'] = df['urls'].apply(scraper.scrape_words_from_urls, split_up_links=False)
+df['urls_list_words'] = df['urls_list'].apply(scraper.scrape_words_from_urls, split_up_links=True)
+# scraper.scrape_words_from_urls(urls, split_up_links=False)
 
 # %%
+
+
+
+#%%
 
 df = pd.read_csv('logs/2018-08-13 20:21:54_logs.csv')
 df1 = classifier.create_csv_for_raiser('logs/2018-08-13 20:21:54_logs.csv')
