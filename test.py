@@ -54,25 +54,6 @@ scraper.clean_words(['Clean this Sentealsdfkja #@32 ', 'hi@#', 'fhit'])
 # df = classifier.create_csv_for_raiser('logs/2018-08-14 21:57:57_logs.csv', return_merged_df=True)
 
 #%%
-scraper = Scraper()
-
-
-
-url = 'file:///Users/xfu21/Downloads/SampleTextFile_10kb.txt'
-urls = [[url, url],
-        [url],
-        ['asdf' + url, url]]
-
-urls_list = [url] * 3
-urls_list[0] = urls_list[0] + 'asd'
-
-
-df = pd.DataFrame(urls_list, columns=['urls_list'])
-df['urls'] = urls
-
-df['urls_words'] = df['urls'].apply(scraper.scrape_words_from_urls, split_up_links=False)
-df['urls_list_words'] = df['urls_list'].apply(scraper.scrape_words_from_urls, split_up_links=True)
-# scraper.scrape_words_from_urls(urls, split_up_links=False)
 
 # %%
 
