@@ -505,6 +505,7 @@ class DisplayApp:
         if raiser_df.empty:
             # No available data
             messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge')
+            return
 
         d = RaiserDialog(self.root, df=raiser_df, title='Raiser Edge CSV')
 

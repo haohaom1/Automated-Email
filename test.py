@@ -16,6 +16,27 @@ from datetime import datetime
 import os
 import warnings
 
+
+scraper = Scraper()
+reader = Emailreader()
+username = 'prospectstudent@colby.edu'
+password = 'Student.2017'
+mail = reader.login_email(username, password)
+
+
+
+
+mails_df = reader.get_emails_from_folder(mail, folder_name='Priority Mail', latest_first=True, cap_at=3)
+links = reader.get_links(mails_df)
+scores_df = scraper.create_scores_data(links, split_up_links=True)
+
+
+#%%
+scores_df['text'][1]
+#%%
+
+scraper.scrape_words_from_urls(urls=['http://kbnd.com/kbnd-news/local-news-feed/379903'], split_up_links=False)
+
 #%%
 
 import pandas as pd

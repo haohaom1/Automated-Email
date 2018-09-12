@@ -139,14 +139,11 @@ class Scraper:
     # returns [occupation_score, colby_score] for all matched people in directory, summed along the axis 0
     # shape num_matched_ppl by 2 (num_features)
 
-    # param: words - string or list of string of all relevant words scraped from the website
-    # links_split_up
+    # param: words - list of all relevant words scraped from the website
 
     # return scores: the scores of all matched persons
     # return args: the row index of
     def total_score(self, words, matched_df, links_split_up):
-
-        words = self.clean_words(words)
 
         self.num_features = 3
         scores = np.zeros((len(matched_df), self.num_features))
@@ -291,7 +288,7 @@ class Scraper:
     def score_all_urls(self, words, matched_df, sum_array=False, links_split_up=False):
         '''
 
-        :param words: list of strings or list of list of strings
+        :param words: list of strings or strings of words scraped from the links
         :param matched_df:
         :param sum_array:
         :param links_split_up: if the links were split up
@@ -306,6 +303,11 @@ class Scraper:
         if not words:
             warnings.warn('suspicious website detected')
             return np.array([np.nan] * self.num_features), np.nan
+
+        if links_split_up:
+            words = self.clean_words(words).split()
+        else:
+            words = [self.clean_words(words_per_link).split() for words_per_link in words]
 
         # decideds logic based on whether the words were split up
         if links_split_up:
@@ -358,7 +360,7 @@ class Scraper:
 
             df = temp_df
 
-        df['text'] = self.scrape_words_from_urls(df['url'], split_up_links=split_up_links)
+        df['text'] = df['url'].apply(lambda x: self.scrape_words_from_urls(x, split_up_links=split_up_links))
 
         scores = []
         args = []
@@ -367,16 +369,16 @@ class Scraper:
         for i in range(len(df)):
             print('processing link {}'.format(i))
 
-            test_data = df.iloc[i]
-            mdf = self.create_matched_df(test_data['first_name'], test_data['last_name'])
+            current_row = df.iloc[i]
+            mdf = self.create_matched_df(current_row['first_name'], current_row['last_name'])
 
             # kill this function if it's running for too long
-            s, arg = self.score_all_urls(test_data['url'], words=df['text'].values, matched_df=mdf, sum_array=True,
+            s, arg = self.score_all_urls(words=current_row['text'], matched_df=mdf, sum_array=True,
                                          links_split_up=split_up_links)
 
             scores.append((s[0], s[1], s[2]))
             args.append(arg)
-            urls.append(test_data['url'])
+            urls.append(current_row['url'])
 
         assert(len(df) == len(scores))  # verifies that the length of each are the same
 
