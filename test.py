@@ -30,6 +30,9 @@ df1 = df.reset_index().set_index(['index', 'id'])
 # df = classifier.create_csv_for_raiser('logs/2018-08-14 21:57:57_logs.csv', return_merged_df=True)
 
 #%%
+df1 = classifier.create_csv_for_raiser(logs='logs/2018-08-16 23:36:55_logs.csv')
+df1
+
 
 # %%
 

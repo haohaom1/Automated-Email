@@ -185,19 +185,21 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
     else:
         df = df.copy()
 
+
     # only convert emails that are moved into the Completed Folder
     df = df.loc[(df['moved']) & (df['label'] == 1)]
 
+
     # returns null if there are no values in the log to be moved
     if df.empty:
-        return
+        return df
 
     dates = datetime.strftime(datetime.now(), '%m/%d/%Y')
     move_or_change = 'N/A'
     publication = 'Publicly/Communictn'
     author = 'xfu21'
 
-    headers = ['date', 'move/change', 'publication', 'author']
+    headers = ['date', 'move/status change (or n/a)', 'type', 'author']
     data = [dates, move_or_change, publication, author]
 
     for h, d in zip(headers, data):
@@ -205,8 +207,6 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
 
     # df[headers] = pd.DataFrame([dates, move_or_change, publication, author], index=df.index)
     # df['text'] = df['url'].apply(lambda x: ' '.join(scraper.get_text_from_url(x, clean=False)))
-
-    # print('df ', df)
 
     # gets the description of the consitutent
     def get_description(fname, lname, arg):
