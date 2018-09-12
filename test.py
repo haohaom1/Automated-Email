@@ -14,7 +14,28 @@ from sklearn.externals import joblib
 import classifier
 from datetime import datetime
 import os
+import warnings
 
+
+scraper = Scraper()
+reader = Emailreader()
+username = 'prospectstudent@colby.edu'
+password = 'Student.2017'
+mail = reader.login_email(username, password)
+
+
+
+
+mails_df = reader.get_emails_from_folder(mail, folder_name='Priority Mail', latest_first=True, cap_at=3)
+links = reader.get_links(mails_df)
+scores_df = scraper.create_scores_data(links, split_up_links=True)
+
+
+#%%
+scores_df['text'][1]
+#%%
+
+scraper.scrape_words_from_urls(urls=['http://kbnd.com/kbnd-news/local-news-feed/379903'], split_up_links=False)
 
 #%%
 
@@ -26,15 +47,19 @@ df = pd.read_csv('logs/2018-08-24 15:01:02_logs.csv')
 df1 = df.reset_index().set_index(['index', 'id'])
 
 #%%
-
+import string
+scraper.clean_words(['Clean this Sentealsdfkja #@32 ', 'hi@#', 'fhit'])
+'Asdf@#@'.lower().translate(str.maketrans('', '', string.punctuation))
+#%%
 # df = classifier.create_csv_for_raiser('logs/2018-08-14 21:57:57_logs.csv', return_merged_df=True)
 
 #%%
-df1 = classifier.create_csv_for_raiser(logs='logs/2018-08-16 23:36:55_logs.csv')
-df1
-
 
 # %%
+
+
+
+#%%
 
 df = pd.read_csv('logs/2018-08-13 20:21:54_logs.csv')
 df1 = classifier.create_csv_for_raiser('logs/2018-08-13 20:21:54_logs.csv')

@@ -58,9 +58,12 @@ class Scraper:
             return ''
 
         except ValueError:
-            raise ValueError('Make sure the Dataframe passed has been cleaned. Use Scraper.clean_urls() '
+            warnings.warn('Make sure the Dataframe passed has been cleaned. Use Scraper.clean_urls() '
                              'on the dataframe to clean it')
 
+    # strip punctuations and lower case from a string
+    def clean_words(self, string_words):
+        return string_words.lower().translate(str.maketrans('', '', string.punctuation))
 
     def get_text_with_nltk(self, url):
         hdr = {'User-Agent': 'Mozilla/5.0'}
@@ -140,7 +143,7 @@ class Scraper:
 
     # return scores: the scores of all matched persons
     # return args: the row index of
-    def total_score(self, words, matched_df):
+    def total_score(self, words, matched_df, links_split_up):
 
         self.num_features = 3
         scores = np.zeros((len(matched_df), self.num_features))
@@ -149,7 +152,6 @@ class Scraper:
             occs = self.extract_orgs(matched_df.iloc[row])
 
             scores[row, :] = [*self.occupation_score(occs, words), self.colby_score(words)]
-        #         print('row', row)
 
         # finds the argument of the person that has the highest score
         # used to back track the matched person
@@ -171,47 +173,163 @@ class Scraper:
         matched_df.reset_index(inplace=True)
         return matched_df
 
+    def scrape_words_from_urls(self, urls, split_up_links):
+        # scrapes words from a list of urls
+        # returns a list of list of words
+
+        if split_up_links:
+            urls = [urls]
+
+        # for handling when the function takes too long to respond
+        def handler(signum, frame):
+            warnings.warn("Unable to load website")
+
+        # terminates the function if it runs for more than 60 seconds
+        signal.signal(signal.SIGALRM, handler)
+        signal.alarm(60)
+
+        list_of_words = []
+
+        # urls is a 1D list of urls
+        # returns a list of list of words
+        for url in urls:
+            try:
+                words = self.get_text_from_url(url, clean=False)
+                if not words:
+                    warnings.warn('suspicious website detected')
+
+                    if split_up_links:
+                        return None
+                    list_of_words.append('')
+
+                words = ' '.join(words)
+
+                if split_up_links:
+                    return words
+                list_of_words.append(words)
+
+            except:
+                warnings.warn('Unable to load {}'.format(url))
+                if split_up_links:
+                    return None
+                list_of_words.append('')
+
+            # resets alarm
+            signal.alarm(0)
+
+        # urls is a list of list of urls, one list per email
+        # returns a list of list of list of words
+
+        return list_of_words
 
 
-    def score_all_urls(self, urls, matched_df, sum_array=False, links_split_up=False):
+    # def scrape_words_from_urls_v2(self, urls, split_up_links):
+    #     # scrapes words from a list of urls
+    #     # returns a list of list of words
+    #
+    #
+    #     # for handling when the function takes too long to respond
+    #     def handler(signum, frame):
+    #         warnings.warn("Unable to load website")
+    #
+    #     # terminates the function if it runs for more than 60 seconds
+    #     signal.signal(signal.SIGALRM, handler)
+    #     signal.alarm(60)
+    #
+    #     list_of_words = []
+    #
+    #     # urls is a 1D list of urls
+    #     # returns a list of list of words
+    #     if split_up_links:
+    #         for url in urls:
+    #             try:
+    #                 words = self.get_text_from_url(url)
+    #                 if not words:
+    #                     warnings.warn('suspicious website detected')
+    #                     words.append('')
+    #
+    #                 list_of_words.append(words)
+    #
+    #             except:
+    #                 warnings.warn('Unable to load {}'.format(url))
+    #                 list_of_words.append('')
+    #
+    #             # resets alarm
+    #             signal.alarm(0)
+    #
+    #     # urls is a list of list of urls, one list per email
+    #     # returns a list of list of list of words
+    #     else:
+    #
+    #         for url_list in urls:
+    #
+    #             temp_words = []
+    #             for url in url_list:
+    #                 try:
+    #                     words = self.get_text_from_url(url)
+    #                     if not words:
+    #                         warnings.warn('suspicious website detected')
+    #                         words.append('')
+    #
+    #                     temp_words.append(words)
+    #
+    #                 except:
+    #                     warnings.warn('Unable to load {}'.format(url))
+    #                     temp_words.append('')
+    #
+    #                 # resets alarm
+    #                 signal.alarm(0)
+    #
+    #             list_of_words.append(temp_words)
+    #
+    #     return list_of_words
+
+
+    def score_all_urls(self, words, matched_df, sum_array=False, links_split_up=False):
+        '''
+
+        :param words: list of strings or strings of words scraped from the links
+        :param matched_df:
+        :param sum_array:
+        :param links_split_up: if the links were split up
+        :return:
+        '''
         # returns nan if the person is not matched in the database
         if matched_df.empty:
             warnings.warn('Unable to find in database')
 
             return np.array([np.nan] * self.num_features), np.nan
 
-        # for handling when the function takes too long to respond
-        def handler(signum, frame):
-            warnings.warn("Unable to load website")
+        if not words:
+            warnings.warn('suspicious website detected')
+            return np.array([np.nan] * self.num_features), np.nan
 
         if links_split_up:
-            urls = [urls]
+            words = self.clean_words(words).split()
+        else:
+            words = [self.clean_words(words_per_link).split() for words_per_link in words]
 
-        scores = np.zeros((len(urls), self.num_features))  # score matrix
-        args = np.zeros((len(urls), 1))  # args matrix; the row is the most likely matched recipient
+        # decideds logic based on whether the words were split up
+        if links_split_up:
+            # words parameter is a list of words, for only one link
 
-        for row, url in enumerate(urls):
+            score, arg = self.total_score(words, matched_df, links_split_up=links_split_up)
 
-            # terminates the function if it runs for more than 60 seconds
-            signal.signal(signal.SIGALRM, handler)
-            signal.alarm(60)
+            scores = np.atleast_2d(score)
+            args = np.atleast_2d(arg)
 
-            try:
-                words = self.get_text_from_url(url)
-                if not words:
-                    warnings.warn('suspicious website detected')
-                    return np.array([np.nan] * self.num_features), np.nan
+        else:
+            # words parameter is a list of list of words, for multiple links
 
-                score, arg = self.total_score(words, matched_df)
+            scores = np.zeros((len(words), self.num_features))  # score matrix
+            args = np.zeros((len(words), 1))  # args matrix; the row is the most likely matched recipient
+
+            for row, words_per_link in enumerate(words):
+                score, arg = self.total_score(words_per_link, matched_df, links_split_up=links_split_up)
                 score = score.sum(axis=0)  # sums all the scores
 
                 scores[row, :] = score
                 args[row, :] = arg
-            except:
-                warnings.warn('Unable to load {} for {} {}'.format(url, matched_df['FIRST'][0], matched_df['LAST'][0]))
-                return np.array([np.nan] * self.num_features), np.nan
-
-            signal.alarm(0)
 
         # print('score', scores)
 
@@ -242,6 +360,8 @@ class Scraper:
 
             df = temp_df
 
+        df['text'] = df['url'].apply(lambda x: self.scrape_words_from_urls(x, split_up_links=split_up_links))
+
         scores = []
         args = []
         urls = []
@@ -249,16 +369,16 @@ class Scraper:
         for i in range(len(df)):
             print('processing link {}'.format(i))
 
-            test_data = df.iloc[i]
-            mdf = self.create_matched_df(test_data['first_name'], test_data['last_name'])
+            current_row = df.iloc[i]
+            mdf = self.create_matched_df(current_row['first_name'], current_row['last_name'])
 
             # kill this function if it's running for too long
-            s, arg = self.score_all_urls(test_data['url'], mdf, sum_array=True, links_split_up=split_up_links)
+            s, arg = self.score_all_urls(words=current_row['text'], matched_df=mdf, sum_array=True,
+                                         links_split_up=split_up_links)
 
             scores.append((s[0], s[1], s[2]))
             args.append(arg)
-            urls.append(test_data['url'])
-
+            urls.append(current_row['url'])
 
         assert(len(df) == len(scores))  # verifies that the length of each are the same
 
