@@ -136,7 +136,7 @@ class Emailreader:
         return df
 
 
-    # # Method for moving an email
+    # Method for moving an email
     def move_email_to_folder(self, mail, orig_folder, target_folder, email_uid):
 
         if orig_folder.lower() == 'inbox':
