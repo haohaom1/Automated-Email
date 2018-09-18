@@ -43,6 +43,8 @@ import classifier
 from scraper import Scraper
 from emailreader import Emailreader
 
+from itertools import groupby
+
 scraper = Scraper()
 reader = Emailreader()
 username = 'prospectstudent@colby.edu'
@@ -416,9 +418,8 @@ class DisplayApp:
 
             rects1 = ax.bar(ind, data, width)
 
-
         if legends:
-            fig.legend()
+            fig.legend(loc=2)
 
         if title:
             fig.title(title)
@@ -487,13 +488,35 @@ class DisplayApp:
 
     def handleViewScore(self):
 
-        if self.current_log is None:
+        if self.df is None:
             messagebox.showwarning('Warning', 'Please select or create a valid log')
             return
-        #
-        # df = pd.read_csv(self.current_log)
 
-        self.embedChart(self.leftmainframe)
+        # sets the figure size and adds the axis
+        fig = Figure(figsize=(3, 3), dpi=100)
+        ax = fig.add_subplot(111)
+
+        # pulls in data
+        data = self.df['Occupation score adjusted']
+        labels = self.df['label']
+
+        bins = np.linspace(data.min(), data.max()+1, 20)
+
+        # splits the scores based on label
+        received_scores = []
+        completed_scores = []
+        for score, lab in zip(data, labels):
+            if lab == 1:
+                completed_scores.append(score)
+            else:
+                received_scores.append(score)
+
+        ax.hist(received_scores, bins, alpha=0.5, label='received')
+        ax.hist(completed_scores, bins, alpha=0.5, label='completed')
+
+        fig.suptitle('Occupation score adjusted')
+
+        self.embedChart(self.leftmainframe, fig=fig, legends=True)
 
     def handleDisplayCSV(self):
         if self.current_log is None:
@@ -520,14 +543,25 @@ class DisplayApp:
         data = self.df['confidence']
         labels = self.df['label']
 
-        ax.hist(data, bins=10, range=(0.5, 1))
+        # splits the score based on label
+        received_conf = []
+        completed_conf = []
+        for score, lab in zip(data, labels):
+            if lab == 1:
+                completed_conf.append(score)
+            else:
+                received_conf.append(score)
 
-        self.embedChart(self.leftmainframe, fig=fig)
+        # side by side histogram
+        # ax.hist([received_conf, completed_conf], histtype='bar',
+        #         label=['completed', 'received'], alpha=0.5, bins=10, range=(0.5, 1))
 
-        # print('children', self.rightmainframe.winfo_children())
+        # overlapping histograms
+        ax.hist(received_conf, bins=10, range=(0.5, 1), alpha=0.5, label='received')
+        ax.hist(completed_conf, bins=10, range=(0.5, 1), alpha=0.5, label='completed')
+        fig.suptitle('Confidence')
 
-        # self.rightmainframe.lift()
-        # self.rightmainframe.update()
+        self.embedChart(self.leftmainframe, fig=fig, legends=True)
 
     def handleClassifyEmails(self):
         '''
