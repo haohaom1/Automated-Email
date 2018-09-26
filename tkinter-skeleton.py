@@ -11,13 +11,18 @@
 '''
 TO DO LIST
 
-- implement the dialog box for classify emails
 - Need ID for constituent
+- Strip constituent's names away from occupants
+- Add a waiting animation when Classifying Emails
+- Make the logs editable
+    - Using either a pop up text or a keyboard shortcut
 
 IDEAS FOR FUTURE
 
-- Display words that are matched by that alumni
-- Display words that the alumni is matched with
+- Add functionality that allows emails to be moved
+- Fix Anti-scrape policy
+    - idea 1: create a separate bot that identifies whether an article is
+    - idea 2: rotate IP addresses, delay scrape time
 
 '''
 
@@ -43,8 +48,6 @@ import classifier
 from scraper import Scraper
 from emailreader import Emailreader
 
-from itertools import groupby
-
 scraper = Scraper()
 reader = Emailreader()
 username = 'prospectstudent@colby.edu'
@@ -53,6 +56,8 @@ mail = reader.login_email(username, password)
 
 import os
 import shutil
+
+import webbrowser
 
 # create a class to build and manage the display
 class DisplayApp:
@@ -115,6 +120,11 @@ class DisplayApp:
         # the canvas objects being shown in the main frame right now
         self.objs = []
 
+        self.logs_lbox = None
+        self.tree = None
+
+        self.rightmainframe = None
+        self.mainframe = None
         # matplotlib objects
         # self.canvas = FigureCanvasTkAgg(fig, master=self.leftmainframe)
         # self.canvas.show()
@@ -145,14 +155,14 @@ class DisplayApp:
         # menu text for the elements
         # the first sublist is the set of items for the file menu
         # the second sublist is the set of items for the option menu
-        menutext = [['conf', 'score', 'Quit  Ctl-Q'],
+        menutext = [['Update Current Table', 'score', 'Quit  Ctl-Q'],
                     ['Clear', '-', '-']]
 
         # menu callback functions (note that some are left blank,
         # so that you can add functions there if you want).
         # the first sublist is the set of callback functions for the file menu
         # the second sublist is the set of callback functions for the option menu
-        menucmd = [[self.handleConfidence, self.handleViewScore, self.handleQuit],
+        menucmd = [[self.updateTable, self.handleViewScore, self.handleQuit],
                    [self.clear, None, None]]
 
         # build the menu elements and callbacks
@@ -169,92 +179,50 @@ class DisplayApp:
         self.canvas.pack(expand=tk.YES, fill=tk.BOTH)
         return
 
-    # handles the logic for when a widget is selected
-    def onselect(self, event):
-        w = event.widget
-
-        # for when the logs listbox is selected
-        if w == self.logs_lbox:
-            index = int(w.curselection()[0])
-            value = w.get(index)
-            # print('You selected item %d: "%s"' % (index, value))
-            self.current_log = 'logs/' + value
-            self.df = pd.read_csv(self.current_log)
-
-            self.buildBottomTable()
-
-        # for when the bottom table is selected
-        elif w == self.tree:
-            self.refreshFrame(self.rightmainframe)
-
-            curItem = self.tree.focus()
-            row_num = self.tree.item(curItem)['text']
-            scores = self.df[['Occupation score', 'Occupation score adjusted', 'Colby score']].iloc[row_num]
-
-            # print(self.tree.item(curItem))
-
-            scores_tree = ttk.Treeview(self.rightmainframe, height=1)
-
-            # makes the identifier smaller
-            scores_tree['show'] = 'headings'
-
-            n = len(scores.index)
-            scores_tree["columns"] = tuple(range(n))
-
-            # sets the column headers
-            for i, col in enumerate(scores.index):
-                scores_tree.column(i, width=100, stretch=True, anchor='center')
-                scores_tree.heading(i, text=col)
-
-            scores_tree.insert('', 0, values=tuple(scores.values))
-
-            scores_tree.pack(side=tk.TOP)
-
-
 
     # build a frame and put controls in it
     # CURRENTLY NOT BEING USED
-    def buildLeftPanel(self):
-
-        '''
-        Contains Buttons that display the results of the classification
-        '''
-
-        ### Control ###
-        # make a control frame on the left
-        leftcntlframe = tk.Frame(self.root)
-        leftcntlframe.pack(side=tk.LEFT, padx=2, pady=2, fill=tk.Y)
-
-        # make a separator frame
-        sep = tk.Frame(self.root, height=self.initDy, width=2, bd=1, relief=tk.SUNKEN)
-        sep.pack(side=tk.LEFT, padx=2, pady=2, fill=tk.Y)
-
-        # use a label to set the size of the left panel
-        label = tk.Label(leftcntlframe, text="Control Panel", width=20)
-        label.pack(side=tk.TOP, pady=10)
-
-        # make a menubutton
-        # self.colorOption = tk.StringVar(self.root)
-        # self.colorOption.set("black")
-        # colorMenu = tk.OptionMenu(leftcntlframe, self.colorOption,
-        #                           "black", "blue", "red", "green")  # can add a command to the menu
-        # colorMenu.pack(side=tk.TOP)
-
-        ## Makes the buttons on the left control frame: Home, Logs, Scoring Metric, Time Usage, and Confidence Level
-
-        leftbuttons = []    # list of button objects on the left side
-
-        commands = [None, None, None, None, self.handleConfidence]  # the command tied to each button
-        texts = ['Home', 'Logs', 'Scoring\nMetric', 'Time\nUsage', 'Confidence\nLevel']
-
-        for text, com in zip(texts, commands):
-            button = tk.Button(leftcntlframe, text=text, pady=15, height=1, width=10,
-                               command=com)
-            button.pack(side=tk.TOP)  # default side is top
-
-            leftbuttons.append(button)
-
-        return
+    # def buildLeftPanel(self):
+    #
+    #     '''
+    #     Contains Buttons that display the results of the classification
+    #     '''
+    #
+    #     ### Control ###
+    #     # make a control frame on the left
+    #     leftcntlframe = tk.Frame(self.root)
+    #     leftcntlframe.pack(side=tk.LEFT, padx=2, pady=2, fill=tk.Y)
+    #
+    #     # make a separator frame
+    #     sep = tk.Frame(self.root, height=self.initDy, width=2, bd=1, relief=tk.SUNKEN)
+    #     sep.pack(side=tk.LEFT, padx=2, pady=2, fill=tk.Y)
+    #
+    #     # use a label to set the size of the left panel
+    #     label = tk.Label(leftcntlframe, text="Control Panel", width=20)
+    #     label.pack(side=tk.TOP, pady=10)
+    #
+    #     # make a menubutton
+    #     # self.colorOption = tk.StringVar(self.root)
+    #     # self.colorOption.set("black")
+    #     # colorMenu = tk.OptionMenu(leftcntlframe, self.colorOption,
+    #     #                           "black", "blue", "red", "green")  # can add a command to the menu
+    #     # colorMenu.pack(side=tk.TOP)
+    #
+    #     ## Makes the buttons on the left control frame: Home, Logs, Scoring Metric, Time Usage, and Confidence Level
+    #
+    #     leftbuttons = []    # list of button objects on the left side
+    #
+    #     commands = [None, None, None, None, self.handleConfidence]  # the command tied to each button
+    #     texts = ['Home', 'Logs', 'Scoring\nMetric', 'Time\nUsage', 'Confidence\nLevel']
+    #
+    #     for text, com in zip(texts, commands):
+    #         button = tk.Button(leftcntlframe, text=text, pady=15, height=1, width=10,
+    #                            command=com)
+    #         button.pack(side=tk.TOP)  # default side is top
+    #
+    #         leftbuttons.append(button)
+    #
+    #     return
 
     def buildRightPanel(self):
 
@@ -303,8 +271,7 @@ class DisplayApp:
         Displays the main CSV file to be transported to Raiser Edge
         '''
 
-        ### Builds the main panel, which will display the CSV to be uploaded to raisers edge
-
+        # Builds the main panel, which will display the CSV to be uploaded to raisers edge
         self.mainframe = tk.Frame(self.root)
         self.mainframe.pack(side=tk.TOP, padx=2, pady=5, fill=tk.BOTH)
 
@@ -321,84 +288,175 @@ class DisplayApp:
         self.leftmainframe = tk.Frame(self.root, pady=10)
         self.leftmainframe.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
-        # self.leftmainframe.grid(row=0, column=0)
+    def setBindings(self):
+        # bind command sequences to the root window
+        self.root.bind('<Control-q>', self.handleQuit)
+
+        # binds the logs listbox to onselect
+        self.logs_lbox.bind('<<ListboxSelect>>', self.onselect)
+
+        # binds double click to bottom table
+        self.root.bind('<Double-Button-1>', self.doubleClick)
+
+        # binds control-e to switch the label of an element in the bottom table
+        self.bottomFrame.bind('<Control-e>', self.switchLabel)
 
 
-        # self.rightmainframe.lift()
-        # self.leftmainframe.lift()
+    def handleQuit(self, event=None):
+        print('Terminating')
+        self.root.destroy()
 
-        # b = tk.Button(self.mainframe, text='Download CSV', pady=15, height=1, width=15)
-        # b.pack(side=tk.TOP)
+
+################################ Build Tables and Graphs to Display ############################
 
     def buildBottomTable(self):
 
-        if isinstance(self.df, pd.DataFrame):
+        if not isinstance(self.df, pd.DataFrame):
+            return
 
-            # delete previous tables, if ones exist
-            self.refreshFrame(self.bottomFrame)
+        # delete previous tables, if ones exist
+        self.refreshFrame(self.bottomFrame)
 
-            self.tree = ttk.Treeview(self.bottomFrame)
+        self.tree = ttk.Treeview(self.bottomFrame)
 
-            # makes the identifier smaller
-            self.tree['show'] = 'headings'
+        # makes the identifier smaller
+        self.tree['show'] = 'headings'
 
-            # changes the row height
-            s = ttk.Style()
-            s.configure('Treeview', rowheight=30)
+        # changes the row height
+        s = ttk.Style()
+        s.configure('Treeview', rowheight=30)
 
-            def builddemotable():
-                self.tree["columns"] = ("one", "two")
-                self.tree.column(1, width=100)
-                self.tree.heading(1, text="column A")
-                self.tree.column("two", width=100)
-                self.tree.heading("two", text="column B")
+        # def builddemotable():
+        #     self.tree["columns"] = ("one", "two")
+        #     self.tree.column(1, width=100)
+        #     self.tree.heading(1, text="column A")
+        #     self.tree.column("two", width=100)
+        #     self.tree.heading("two", text="column B")
+        #
+        #     self.tree.insert("", 0, text="Line 1", values=("1A", "1b"), tags='shaded')
+        #
+        #     id2 = self.tree.insert("", 1, "dir2", text="Dir 2", values=('test a', 'test b'))
+        #     self.tree.insert(id2, "end", "dir 2", text="sub dir 2", values=("2A", "2B"))
+        #
+        #     ##alternatively:
+        #     self.tree.insert("", 3, "dir3", text="Dir 3", tags='shaded')
+        #     self.tree.insert("dir3", 3, text=" sub dir 3", values=("3A", " 3B"))
 
-                self.tree.insert("", 0, text="Line 1", values=("1A", "1b"), tags='shaded')
+        df = self.df.loc[:, ['id', 'time', 'first_name', 'last_name', 'confidence', 'label', 'moved', 'text']]
 
-                id2 = self.tree.insert("", 1, "dir2", text="Dir 2", values=('test a', 'test b'))
-                self.tree.insert(id2, "end", "dir 2", text="sub dir 2", values=("2A", "2B"))
+        # formats a long string to make it display better
+        def process_text(string, length=50, total_string_size=100):
+            string = string[:total_string_size]
+            return '\n'.join(textwrap.wrap(string, length)) + '...'
 
-                ##alternatively:
-                self.tree.insert("", 3, "dir3", text="Dir 3", tags='shaded')
-                self.tree.insert("dir3", 3, text=" sub dir 3", values=("3A", " 3B"))
+        # preprocesses the dataframe
+        df = df.rename(index=int, columns={'first_name': 'first', 'last_name': 'last', 'time': 'date'})  # make the columns shorter
+        df['text'] = df['text'].apply(process_text)    # limits the characters in the text column
+        df['confidence'] = df['confidence'].apply(lambda x: np.around(x, 3))    # rounds the confidence
+        df['date'] = df['date'].apply(lambda x: x.split()[0])       # only shows the date and not the time
 
-            df = self.df.loc[:, ['id', 'time', 'first_name', 'last_name', 'confidence', 'label', 'moved', 'text']]
+        # builds the columns and sets the width
+        num_col = len(df.columns)
+        self.tree['columns'] = tuple(range(num_col))
+        for i, col in enumerate(df.columns):
 
-            # formats a long string to make it display better
-            def process_text(string, length=50, total_string_size=100):
-                string = string[:total_string_size]
-                return '\n'.join(textwrap.wrap(string, length)) + '...'
+            # give extra width to text
+            width = 500 if col == 'text' else 100
+            stretch = col == 'text'
 
-            # preprocesses the dataframe
-            df = df.rename(index=int, columns={'first_name': 'first', 'last_name': 'last', 'time': 'date'})  # make the columns shorter
-            df['text'] = df['text'].apply(process_text)    # limits the characters in the text column
-            df['confidence'] = df['confidence'].apply(lambda x: np.around(x, 3))    # rounds the confidence
-            df['date'] = df['date'].apply(lambda x: x.split()[0])       # only shows the date and not the time
+            self.tree.column(i, width=width, minwidth=0, stretch=stretch)
+            self.tree.heading(i, text=col)
 
-            # builds the columns and sets the width
-            num_col = len(df.columns)
-            self.tree['columns'] = tuple(range(num_col))
-            for i, col in enumerate(df.columns):
+        # builds the contents of the table
+        for i, row in df.iterrows():
+            shaded = 'even_row' if i % 2 == 0 else 'odd_row'
+            self.tree.insert('', i, text=i, values=tuple(row), tag=shaded)
 
-                # give extra width to text
-                width = 500 if col == 'text' else 100
-                stretch = col == 'text'
+        self.tree.tag_configure('even_row', background='lightgrey')
+        self.tree.pack(fill=tk.X, padx=5, pady=5)
 
-                self.tree.column(i, width=width, minwidth=0, stretch=stretch)
-                self.tree.heading(i, text=col)
+        # binds Button1 to the tree
+        self.tree.bind('<<TreeviewSelect>>', self.onselect)
 
-            # builds the contents of the table
-            for i, row in df.iterrows():
-                shaded = 'even_row' if i % 2 == 0 else 'odd_row'
-                self.tree.insert('', i, text=i, values=tuple(row), tag=shaded)
+    def buildScoresTable(self, curItem):
+        '''
+        passes in the current selected treeview row to display the score table
+        '''
+        row_num = self.tree.item(curItem)['text']
+        scores = self.df[['Occupation score', 'Occupation score adjusted', 'Colby score']].iloc[row_num]
 
-            # builddemotable()
+        scores_tree = ttk.Treeview(self.rightmainframe, height=1)
 
-            self.tree.tag_configure('even_row', background='lightgrey')
-            self.tree.pack(fill=tk.X, padx=5, pady=5)
+        # makes the identifier smaller
+        scores_tree['show'] = 'headings'
 
-            # binds Button1 to the tree
-            self.tree.bind('<<TreeviewSelect>>', self.onselect)
+        # sets up the rows and column headers of the tree
+        n = len(scores.index)
+        scores_tree["columns"] = tuple(range(n))
+
+        # sets the column headers
+        for i, col in enumerate(scores.index):
+            scores_tree.column(i, width=100, stretch=True, anchor='center')
+            scores_tree.heading(i, text=col)
+
+        scores_tree.insert('', 0, values=tuple(scores.values))
+        scores_tree.pack(side=tk.TOP, fill=tk.X)
+
+    def buildMatchedTable(self, curItem):
+        '''
+        Passes in the current selected treeview row to display matched words
+        '''
+
+        row_num = self.tree.item(curItem)['text']
+
+        # creates matched words for the constituent
+        curr_df_row = self.df.iloc[row_num]
+        constituent = scraper.create_matched_df(fname=curr_df_row['first_name'],
+                                                lname=curr_df_row['last_name']).iloc[int(curr_df_row['arg'])]
+
+        occs = scraper.extract_orgs(constituent)
+        occ_data = scraper.get_matched_occs(curr_df_row['text'], occs)
+        # print(occ_data)
+
+        occ_tree = ttk.Treeview(self.rightmainframe, height=5)
+
+        # makes the identifier smaller
+        occ_tree['show'] = 'headings'
+
+        # sets up the rows and column headers of the tree
+        n = 2  # occupation and count
+        occ_tree["columns"] = tuple(range(n))
+
+        # sets the column headers
+        for i, col in enumerate(['Occupation', 'Count']):
+            occ_tree.column(i, width=100, stretch=True, anchor='center')
+            occ_tree.heading(i, text=col)
+
+        for i, data in enumerate(occ_data):
+            occ_tree.insert('', i, values=data)
+
+        occ_tree.pack(pady=10, fill=tk.X)
+
+    def buildOccsLabel(self, curItem):
+        '''
+        passes in the current selected row to display the selected constituent's occupations
+        '''
+
+        row_num = self.tree.item(curItem)['text']
+        # creates matched words for the constituent
+        curr_df_row = self.df.iloc[row_num]
+        constituent = scraper.create_matched_df(fname=curr_df_row['first_name'],
+                                                lname=curr_df_row['last_name']).iloc[int(curr_df_row['arg'])]
+
+        occupations = scraper.extract_orgs(constituent, ordering=True)
+
+        lbox = tk.Listbox(self.rightmainframe, exportselection=0)
+        lbox.pack(fill=tk.X)
+
+        for occ in occupations:
+            lbox.insert(tk.END, ' '.join(occ))
+
+        pass
 
 
     def embedChart(self, master, fig=None, side=tk.TOP, legends=None, title=None):
@@ -428,16 +486,71 @@ class DisplayApp:
         canvas.show()
         canvas.get_tk_widget().pack(side=side, fill=tk.BOTH, expand=1)
 
-
-        # toolbar = NavigationToolbar2TkAgg(canvas=canvas, window=master)
-        # toolbar.update()
-        # canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        toolbar = NavigationToolbar2TkAgg(canvas=canvas, window=master)
+        toolbar.update()
+        canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         # updates canvas
         # master.lift()
         # master.update_idletasks()
         # self.root.update_idletasks()
         # self.rightmainframe.lift()
+
+####################### Display Logic  #############################
+
+    # handles the logic for when a widget is selected
+    def onselect(self, event):
+        w = event.widget
+
+        # for when the logs listbox is selected
+        if w == self.logs_lbox:
+            index = int(w.curselection()[0])
+            value = w.get(index)
+            self.current_log = 'logs/' + value
+            self.df = pd.read_csv(self.current_log)
+
+            # refreshes the top info screen
+            self.refreshFrame(self.rightmainframe)
+            self.refreshFrame(self.leftmainframe)
+
+            # builds table
+            self.buildBottomTable()
+
+        # for when the bottom table is selected
+        elif w == self.tree:
+            self.refreshFrame(self.rightmainframe)
+
+            # puts focus onto the bottom frame
+            self.bottomFrame.focus_set()
+
+            # selects scores from the current row
+            curItem = self.tree.focus()
+
+            # builds the table that displays the 3 scoring metrics
+            self.buildScoresTable(curItem)
+
+            # builds the table that displays which words were matched
+            self.buildMatchedTable(curItem)
+
+            # builds the label that displays the constituent's occupation
+            self.buildOccsLabel(curItem)
+
+    def doubleClick(self, event):
+        w = event.widget
+
+        if w == self.tree:
+            print('double clicked')
+
+            # selects scores from the current row
+            curItem = self.tree.focus()
+
+            self.openUrl(curItem)
+
+    # opens the url of the current item from
+    def openUrl(self, curItem):
+        row_num = self.tree.item(curItem)['text']
+        url = self.df['url'][row_num]
+        webbrowser.open_new(url)
 
     def refreshFrame(self, frame, obj=None):
         '''
@@ -459,31 +572,8 @@ class DisplayApp:
         for frame in [self.bottomFrame, self.leftmainframe, self.rightmainframe]:
             self.refreshFrame(frame)
 
-        # def recursive_clear(parent_frame):
-        #     window_children = parent_frame.winfo_children()
-        #     if window_children:
-        #         for c in window_children:
-        #             # if isinstance(c, tk.Frame):
-        #             #     recursive_clear(c)
-        #             # else:
-        #             #     c.destroy()
-        #             c.destroy()
-        #
-        # recursive_clear(self.mainframe)
-        # recursive_clear(self.bottomFrame)
 
-
-    def setBindings(self):
-        # bind command sequences to the root window
-        self.root.bind('<Control-q>', self.handleQuit)
-
-        # binds the logs listbox to onselect
-        self.logs_lbox.bind('<<ListboxSelect>>', self.onselect)
-
-
-    def handleQuit(self, event=None):
-        print('Terminating')
-        self.root.destroy()
+####################### Functions that respond to Buttons  #############################
 
 
     def handleViewScore(self):
@@ -601,42 +691,44 @@ class DisplayApp:
         self.df = None
         self.current_log = None
 
+    def switchLabel(self, event=None):
+        '''
+        This function is used to switch the labels in the bottom table and the logs
+        '''
+        print('switching labels')
 
-    # def handleButton1(self):
-    #     print('handling command button:', self.colorOption.get())
-    #
-    # def handleMenuCmd1(self):
-    #     print('handling menu command 1')
-    #
-    # def handleMouseButton1(self, event):
-    #     print('handle mouse button 1: %d %d' % (event.x, event.y))
-    #     self.baseClick = (event.x, event.y)
-    #
-    # def handleMouseButton2(self, event):
-    #     self.baseClick = (event.x, event.y)
-    #     print('handle mouse button 2: %d %d' % (event.x, event.y))
-    #
-    # def handleMouseButton3(self, event):
-    #     self.baseClick = (event.x, event.y)
-    #     print('handle mouse button 3: %d %d' % (event.x, event.y))
-    #
-    # # This is called if the first mouse button is being moved
-    # def handleMouseButton1Motion(self, event):
-    #     # calculate the difference
-    #     diff = (event.x - self.baseClick[0], event.y - self.baseClick[1])
-    #
-    #     # update base click
-    #     self.baseClick = (event.x, event.y)
-    #     print('handle button1 motion %d %d' % (diff[0], diff[1]))
-    #
-    # # This is called if the second button of a real mouse has been pressed
-    # # and the mouse is moving. Or if the control key is held down while
-    # # a person moves their finger on the track pad.
-    # def handleMouseButton2Motion(self, event):
-    #     print('handle button 2 motion %d %d' % (event.x, event.y))
-    #
-    # def handleMouseButton3Motion(self, event):
-    #     print('handle button 3 motion %d %d' % (event.x, event.y))
+        label_col = 5       # this is the row number for labels
+
+        curItem = self.tree.focus()
+
+        # if nothing is currently selected
+        if not curItem:
+            return
+
+        row_num = self.tree.item(curItem)['text']       # the row number in the treeview
+        row_values = self.tree.item(curItem)['values']  # the values of that row
+
+        label = row_values[label_col]                   # the predicted label of selected row
+        new_label = 1 if label == 0 else 0              # the updated label (either 1 or 0)
+
+        row_values[label_col] = new_label               # the new label of
+        shaded = 'even_row' if row_num % 2 == 0 else 'odd_row'    # whether or not to shade the tree row
+        self.tree.delete(curItem)
+        self.tree.insert('', row_num, text=row_num, values=row_values, tag=shaded)
+
+        self.df.ix[row_num, 'label'] = new_label  # updates the new value in the locally stored dataframe
+
+
+
+        # print('item', row_values)
+
+    def updateTable(self):
+        '''
+        Updates the self.df to the logs that are currently selected
+        *** May make this automatic in the future ***
+        '''
+        self.df.to_csv(self.current_log, index=False)
+
 
     def main(self):
         print('Entering main loop')
@@ -812,11 +904,11 @@ class ClassifyDialog(simpledialog.Dialog):
         _, self.filename = classifier.classify_mails(mail, folder=self.folder.get(),
                                                      cap_at=self.cap_at.get(), log_data=True,
                                                      to_raiser=False, log_filename=True,
-                                                     threshold=0.99)
+                                                     move=False)
         print('logs saved at' + self.filename)
 
 
 if __name__ == "__main__":
-    dapp = DisplayApp(1200, 675)
+    dapp = DisplayApp(1600, 800)
     dapp.main()
 

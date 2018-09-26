@@ -25,7 +25,24 @@ password = 'Student.2017'
 mail = reader.login_email(username, password)
 
 #%%
-x = zip(np.random.choice(a=[1], size=10), np.random.randn(10))
+# x = zip(np.random.choice(a=[1], size=10), np.random.randn(10))
+text = 'Hi my name is mike and i love programming And and And Mike mike '
+occs = ['mike', 'and', 'afda']
+
+# score = scraper.get_matched_occs(text, occs, n=5)
+# sum([s[1] for s in score])
+
+text = scraper.clean_words(text)
+counts = sum([text.count(occ) for occ in occs])
+counts
+
+# vec = CountVectorizer()
+# vec.fit_transform([text])
+# score = vec.transform(occs).toarray()#.sum()
+# score_sum = score.sum()
+#%%
+counts
+
 #%%
 from itertools import groupby
 x = sorted(x, key=lambda k: k[0])
@@ -66,6 +83,10 @@ scraper.clean_words(['Clean this Sentealsdfkja #@32 ', 'hi@#', 'fhit'])
 
 # %%
 
+text = 'Are sentiments apartments decisively the especially alteration. Thrown shy denote ten ladies though ask saw.'
+occs = ['are', 'the', 'ten', 'hi']
+
+scraper.get_matched_occs(text, occs, 2)
 
 
 #%%
