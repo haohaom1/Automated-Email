@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 import ast
 import signal
 import ssl
+from collections import Counter
 
 
 # ## Scrapes data off of website
@@ -84,7 +85,11 @@ class Scraper:
 
 
     ## This will extract important words from an occupation
+    # df is a pd Series that contains orgs
     def extract_orgs(self, df, ordering=False):
+
+        names = df[['FIRST', 'NICKNAME', 'LAST']].tolist()
+        names = [n.lower() for n in names if isinstance(n, str)]
 
         df = df.dropna()
         orgs = [df[col] for col in df.index if 'ORG' in col]
@@ -102,7 +107,8 @@ class Scraper:
             orgs = nltk.word_tokenize(orgs)
             orgs = [''.join(c.lower() for c in s if c not in string.punctuation) for s in orgs]  # strip punctuaions and lower cases words
             orgs = list(set(orgs))  # removes duplicates
-            orgs = [j for j in orgs if j not in self.common_words]  # strips away common words
+            orgs = [j for j in orgs if j not in self.common_words and len(j) > 2]  # strips away common words and len words > 2
+            orgs = [j for j in orgs if j not in names]      # strip away words that have the constituent's name in it
 
             return np.unique(orgs)
         else:
@@ -114,22 +120,43 @@ class Scraper:
         df = df[df['url'].map(len) > 0].reset_index(drop=True)
         return df
 
+    # takes in text, and returns the top n words matched with # of times matched with occupation text
+    def get_matched_occs(self, text, occs, n=5):
+        '''
+
+        :param text: string, text data
+        :param occs: list of string, occupation text
+        :param n: int, number of items wanted
+        :return: list of tuples containing (occ, # times matched)
+        '''
+        text = self.clean_words(text)
+        counts = [text.count(occ) for occ in occs]
+
+        # show either the max number of elements available, or n, which ever is smaller
+        n = min(len([x for x in counts if x > 0]), n)
+
+        # sorts the list, then returns the first n elements
+        return sorted(list(zip(occs, counts)), key=lambda x: x[1], reverse=True)[:n]
+
 
     # creates a Work Count Vectorizer, which calculates a score from the list of occupations
     # params: keys - list of strings to use as the key
     # params: words - list of all relevant words scraped from the website
 
-    # return: score
+    # return: score, adjusted score
     def occupation_score(self, keys, words):
-        vec = CountVectorizer()
-        vec.fit_transform(keys)
-        score = vec.transform(words).toarray().sum()
+        # vec = CountVectorizer()
+        # vec.fit_transform(keys)
+        # score = vec.transform(words).toarray().sum()
+        words = self.clean_words(' '.join(words))
+        score = sum([words.count(key) for key in keys])
+
         adj_score = score / len(keys)
         return score, adj_score
 
 
-    # creates a Colby Count Vectorizer, which calculates a score based on how often 'Colby' appears in the text
     # params: words - list of all relevant words scraped from the website
+    # return: the number of times colby college appeared
     def colby_score(self, words):
         words = ' '.join(words)
         score = words.count('colby college')
@@ -142,8 +169,8 @@ class Scraper:
     # param: words - list of all relevant words scraped from the website
 
     # return scores: the scores of all matched persons
-    # return args: the row index of
-    def total_score(self, words, matched_df, links_split_up):
+    # return args: the row index of the best matched constituent
+    def total_score(self, words, matched_df):
 
         self.num_features = 3
         scores = np.zeros((len(matched_df), self.num_features))
@@ -313,7 +340,7 @@ class Scraper:
         if links_split_up:
             # words parameter is a list of words, for only one link
 
-            score, arg = self.total_score(words, matched_df, links_split_up=links_split_up)
+            score, arg = self.total_score(words, matched_df)
 
             scores = np.atleast_2d(score)
             args = np.atleast_2d(arg)
@@ -325,7 +352,7 @@ class Scraper:
             args = np.zeros((len(words), 1))  # args matrix; the row is the most likely matched recipient
 
             for row, words_per_link in enumerate(words):
-                score, arg = self.total_score(words_per_link, matched_df, links_split_up=links_split_up)
+                score, arg = self.total_score(words_per_link, matched_df)
                 score = score.sum(axis=0)  # sums all the scores
 
                 scores[row, :] = score
