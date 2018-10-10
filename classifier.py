@@ -185,9 +185,9 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
     else:
         df = df.copy()
 
-
     # only convert emails that are moved into the Completed Folder
     df = df.loc[(df['moved']) & (df['label'] == 1)]
+    # df = df.loc[df['label'] == 1]
 
 
     # returns null if there are no values in the log to be moved
@@ -223,8 +223,9 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
                                                              arg=row['arg']),
                                  axis=1).values.tolist()
 
-    headers = headers + ['description', 'text']
+    headers = headers + ['description', 'text', 'constituent_id']
     raisers_df = df.loc[:, headers]
+    raisers_df.rename(index=int, columns={'constituent_id': 'id'}, inplace=True)
 
     if return_merged_df:
 

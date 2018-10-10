@@ -11,11 +11,8 @@
 '''
 TO DO LIST
 
-- Need ID for constituent
-- Strip constituent's names away from occupants
 - Add a waiting animation when Classifying Emails
-- Make the logs editable
-    - Using either a pop up text or a keyboard shortcut
+- fix bug of why i cant just classify 1 mail
 
 IDEAS FOR FUTURE
 
@@ -23,6 +20,7 @@ IDEAS FOR FUTURE
 - Fix Anti-scrape policy
     - idea 1: create a separate bot that identifies whether an article is
     - idea 2: rotate IP addresses, delay scrape time
+- optimize retrieving data (maybe line by line) so a crash wont lose all the data
 
 '''
 
@@ -99,10 +97,10 @@ class DisplayApp:
         # self.buildCanvas()
 
         # bring the window to the front
-        # self.root.lift()
+        self.root.lift()
 
         # - do idle events here to get actual canvas size
-        # self.root.update_idletasks()
+        self.root.update_idletasks()
 
         # now we can ask the size of the canvas
         # print(self.canvas.winfo_geometry())
@@ -156,14 +154,14 @@ class DisplayApp:
         # the first sublist is the set of items for the file menu
         # the second sublist is the set of items for the option menu
         menutext = [['Update Current Table', 'score', 'Quit  Ctl-Q'],
-                    ['Clear', '-', '-']]
+                    ['Clear', 'Switch Label Ctrl-e', '-']]
 
         # menu callback functions (note that some are left blank,
         # so that you can add functions there if you want).
         # the first sublist is the set of callback functions for the file menu
         # the second sublist is the set of callback functions for the option menu
         menucmd = [[self.updateTable, self.handleViewScore, self.handleQuit],
-                   [self.clear, None, None]]
+                   [self.clear, self.switchLabel, None]]
 
         # build the menu elements and callbacks
         for i in range(len(menulist)):
@@ -342,7 +340,8 @@ class DisplayApp:
         #     self.tree.insert("", 3, "dir3", text="Dir 3", tags='shaded')
         #     self.tree.insert("dir3", 3, text=" sub dir 3", values=("3A", " 3B"))
 
-        df = self.df.loc[:, ['id', 'time', 'first_name', 'last_name', 'confidence', 'label', 'moved', 'text']]
+        # Warning shows up because past dataframes do not have the constituent_id column
+        df = self.df.loc[:, ['constituent_id', 'time', 'first_name', 'last_name', 'confidence', 'label', 'moved', 'text']]
 
         # formats a long string to make it display better
         def process_text(string, length=50, total_string_size=100):
@@ -350,7 +349,10 @@ class DisplayApp:
             return '\n'.join(textwrap.wrap(string, length)) + '...'
 
         # preprocesses the dataframe
-        df = df.rename(index=int, columns={'first_name': 'first', 'last_name': 'last', 'time': 'date'})  # make the columns shorter
+        df = df.rename(index=int, columns={'first_name': 'first',
+                                           'last_name': 'last',
+                                           'time': 'date',
+                                           'constituent_id': 'id'})  # make the columns shorter
         df['text'] = df['text'].apply(process_text)    # limits the characters in the text column
         df['confidence'] = df['confidence'].apply(lambda x: np.around(x, 3))    # rounds the confidence
         df['date'] = df['date'].apply(lambda x: x.split()[0])       # only shows the date and not the time
@@ -428,7 +430,7 @@ class DisplayApp:
         occ_tree["columns"] = tuple(range(n))
 
         # sets the column headers
-        for i, col in enumerate(['Occupation', 'Count']):
+        for i, col in enumerate(['Matched', 'Count']):
             occ_tree.column(i, width=100, stretch=True, anchor='center')
             occ_tree.heading(i, text=col)
 
@@ -496,7 +498,7 @@ class DisplayApp:
         # self.root.update_idletasks()
         # self.rightmainframe.lift()
 
-####################### Display Logic  #############################
+###############################  Display Logic  #####################################
 
     # handles the logic for when a widget is selected
     def onselect(self, event):
@@ -523,6 +525,9 @@ class DisplayApp:
             # puts focus onto the bottom frame
             self.bottomFrame.focus_set()
 
+            # displays the scores graph
+            self.handleViewScore()
+
             # selects scores from the current row
             curItem = self.tree.focus()
 
@@ -534,6 +539,7 @@ class DisplayApp:
 
             # builds the label that displays the constituent's occupation
             self.buildOccsLabel(curItem)
+
 
     def doubleClick(self, event):
         w = event.widget
@@ -691,13 +697,14 @@ class DisplayApp:
         self.df = None
         self.current_log = None
 
+    # switches the label from 0 to 1
     def switchLabel(self, event=None):
         '''
         This function is used to switch the labels in the bottom table and the logs
         '''
         print('switching labels')
 
-        label_col = 5       # this is the row number for labels
+        label_col = 5       # this is the column number for labels
 
         curItem = self.tree.focus()
 
@@ -705,22 +712,63 @@ class DisplayApp:
         if not curItem:
             return
 
-        row_num = self.tree.item(curItem)['text']       # the row number in the treeview
+        row_num = self.tree.item(curItem)['text']  # the row number in the treeview
         row_values = self.tree.item(curItem)['values']  # the values of that row
 
-        label = row_values[label_col]                   # the predicted label of selected row
-        new_label = 1 if label == 0 else 0              # the updated label (either 1 or 0)
+        label = row_values[label_col]  # the predicted label of selected row
+        new_label = 1 if label == 0 else 0  # the updated label (either 1 or 0)
 
-        row_values[label_col] = new_label               # the new label of
-        shaded = 'even_row' if row_num % 2 == 0 else 'odd_row'    # whether or not to shade the tree row
+        row_values[label_col] = new_label  # the new label of
+        shaded = 'even_row' if row_num % 2 == 0 else 'odd_row'  # whether or not to shade the tree row
         self.tree.delete(curItem)
         self.tree.insert('', row_num, text=row_num, values=row_values, tag=shaded)
 
         self.df.ix[row_num, 'label'] = new_label  # updates the new value in the locally stored dataframe
 
 
+    # If the user is confident, then they can change the "moved" flag
+    def switchMovedState(self, event=None):
 
-        # print('item', row_values)
+        # verifies that the user wants to switch states
+        result = tk.messagebox.askquestion('', 'Are you sure you want to change the state?')
+        if result == 'yes':
+
+            label_col = 6  # this is the column number for labels
+
+            curItem = self.tree.focus()
+
+            # if nothing is currently selected
+            if not curItem:
+                return
+
+            row_num = self.tree.item(curItem)['text']  # the row number in the treeview
+            row_values = self.tree.item(curItem)['values']  # the values of that row
+
+            orig_value = row_values[label_col]  # the predicted label of selected row
+            new_label = not orig_value  # the updated label (either True or False)
+
+            row_values[label_col] = new_label  # the new label of
+            shaded = 'even_row' if row_num % 2 == 0 else 'odd_row'  # whether or not to shade the tree row
+            self.tree.delete(curItem)
+            self.tree.insert('', row_num, text=row_num, values=row_values, tag=shaded)
+
+            self.df.ix[row_num, 'label'] = new_label  # updates the new value in the locally stored dataframe
+
+        pass
+
+    def moveMailsManually(self, event=None):
+        '''
+        The user has the option change the
+        :return:
+        '''
+
+        # asks the user to verify that they want to switch the mail
+        ### create dialog box
+
+        result = tk.messagebox.askquestion('', 'Are you sure?')
+        if result == 'yes':
+            # change the label on the cached table
+            pass
 
     def updateTable(self):
         '''
@@ -734,6 +782,8 @@ class DisplayApp:
         print('Entering main loop')
         self.root.mainloop()
 
+
+#################################### Dialog Box #########################################
 
 # Parent class for dialog box
 class CustomDialog(simpledialog.Dialog):
@@ -871,7 +921,8 @@ class ClassifyDialog(simpledialog.Dialog):
 
         self.folder = tk.StringVar(value='Priority Mail')
         self.cap_at = tk.IntVar(value=0)
-        self.checked = tk.IntVar(value=1)
+
+        self.waitTime = tk.StringVar(value='Approx. Wait Time: 0 mins')      # approx wait time
 
         simpledialog.Dialog.__init__(self, parent, title)
 
@@ -886,25 +937,38 @@ class ClassifyDialog(simpledialog.Dialog):
         tk.Label(master, text='Classify How Many Emails:').grid(row=1, column=0)
         tk.Entry(master, textvariable=self.cap_at).grid(row=1, column=1)
 
+        # self.pb = ttk.Progressbar(master, orient='horizontal', mode='determinate')
+        # self.pb.grid(row=2, column=0, columnspan=3)
         # tk.Label(master, text='Create Logs (Highly Recommended)').grid(row=2, column=0)
         # checkbutton = tk.Checkbutton(master, text='Create Logs (Highly Recommended)',
         #                              variable=self.checked)
         # checkbutton.grid(row=2, column=1)
 
+        self.msgLabel = tk.Label(master, textvariable=self.waitTime)
+        self.msgLabel.grid(row=2, column=0, columnspan=5)
+        # self.msgLabel.grid_forget()     # hides the label for now
+
+        self.msgLabel.config(text='Approx. Wait Time: {} mins'.format(np.ceil(self.cap_at.get() / 10)))
+
     def validate(self):
-        if self.checked.get() > 0:
-            return True
-        else:
-            return False
+        # if self.checked.get() > 0:
+        #     return True
+        # else:
+        #     return False
+        return True
 
 
     def apply(self):
+
         print('Classifying {} mails in the folder {}'.format(self.cap_at.get(), self.folder.get()))
 
+
+        # starts to classify emails
         _, self.filename = classifier.classify_mails(mail, folder=self.folder.get(),
                                                      cap_at=self.cap_at.get(), log_data=True,
                                                      to_raiser=False, log_filename=True,
-                                                     move=False)
+                                                     move=False, threshold=1.01)
+
         print('logs saved at' + self.filename)
 
 
