@@ -212,8 +212,8 @@ class Scraper:
             warnings.warn("Unable to load website")
 
         # terminates the function if it runs for more than 60 seconds
-        signal.signal(signal.SIGALRM, handler)
-        signal.alarm(60)
+        # signal.signal(signal.SIGALRM, handler)
+        # signal.alarm(60)
 
         list_of_words = []
 

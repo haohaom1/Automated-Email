@@ -6,10 +6,15 @@ from emailreader import Emailreader
 from datetime import datetime
 import numpy as np
 
+import pathlib
+
 scraper = Scraper()
 reader = Emailreader()
 
-constituent_df = pd.read_csv('datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv')
+constituent_df = pd.read_csv(pathlib.PureWindowsPath(pathlib.Path('datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv'))
+)
+
+
 
 def score(df, clf, return_proba=False, remove_nan=True):
     '''
@@ -161,16 +166,17 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
         # logs the data if the dataframe is not empty
         if not df.empty:
-            date = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+            date = datetime.strftime(datetime.now(), '%Y-%m-%d %H.%M.%S')
 
             # saves to the logs
-            df.to_csv('logs/{}_logs.csv'.format(date), index=False)
-
+            windows_path = pathlib.PureWindowsPath(pathlib.Path('logs/{}_logs.csv'.format(date)))
+            df.to_csv(windows_path, index=False)
 
             # if to_raiser is true AND there is an available data from logs, then return the data to be
             # exported to Raisers edge as well
             if to_raiser:
-                return df, create_csv_for_raiser('logs/{}_logs.csv'.format(date))
+                window_path = pathlib.PureWindowsPath(pathlib.Path('logs/{}_logs.csv'.format(date)))
+                return df, create_csv_for_raiser(windows_path)
 
             if log_filename:
                 return df, '{}_logs.csv'.format(date)

@@ -15,9 +15,9 @@ import classifier
 from datetime import datetime
 import os
 import warnings
-
-
-
+import webbrowser
+# nltk.download('punkt')
+#%%
 scraper = Scraper()
 reader = Emailreader()
 username = 'prospectstudent@colby.edu'

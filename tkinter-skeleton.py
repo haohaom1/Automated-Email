@@ -297,7 +297,7 @@ class DisplayApp:
         self.root.bind('<Double-Button-1>', self.doubleClick)
 
         # binds control-e to switch the label of an element in the bottom table
-        self.bottomFrame.bind('<Control-e>', self.switchLabel)
+        # self.bottomFrame.bind('<Control-e>', self.switchLabel)
 
 
     def handleQuit(self, event=None):
@@ -379,6 +379,12 @@ class DisplayApp:
 
         # binds Button1 to the tree
         self.tree.bind('<<TreeviewSelect>>', self.onselect)
+
+        # binds right click to bottom table
+        # self.root.bind('<Double-Button-1>', self.doubleClick)
+
+        # binds control-e to switch the label of an element in the bottom table
+        self.bottomFrame.bind('<Control-e>', self.switchLabel)
 
     def buildScoresTable(self, curItem):
         '''
@@ -522,11 +528,11 @@ class DisplayApp:
         elif w == self.tree:
             self.refreshFrame(self.rightmainframe)
 
+            # displays the scores graph
+            # self.handleViewScore()
+
             # puts focus onto the bottom frame
             self.bottomFrame.focus_set()
-
-            # displays the scores graph
-            self.handleViewScore()
 
             # selects scores from the current row
             curItem = self.tree.focus()
@@ -539,6 +545,8 @@ class DisplayApp:
 
             # builds the label that displays the constituent's occupation
             self.buildOccsLabel(curItem)
+
+
 
 
     def doubleClick(self, event):
@@ -556,7 +564,11 @@ class DisplayApp:
     def openUrl(self, curItem):
         row_num = self.tree.item(curItem)['text']
         url = self.df['url'][row_num]
-        webbrowser.open_new(url)
+
+        # registers chrome
+        webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'), 1)
+
+        webbrowser.get('chrome').open_new(url)
 
     def refreshFrame(self, frame, obj=None):
         '''
@@ -702,6 +714,8 @@ class DisplayApp:
         '''
         This function is used to switch the labels in the bottom table and the logs
         '''
+        print(event.widget)
+        # if event.widget == self.tree:
         print('switching labels')
 
         label_col = 5       # this is the column number for labels
