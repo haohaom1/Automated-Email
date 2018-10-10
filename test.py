@@ -17,13 +17,39 @@ import os
 import warnings
 
 
+
 scraper = Scraper()
 reader = Emailreader()
 username = 'prospectstudent@colby.edu'
 password = 'Student.2017'
 mail = reader.login_email(username, password)
 
+#%%
+# x = zip(np.random.choice(a=[1], size=10), np.random.randn(10))
+text = 'Hi my name is mike and i love programming And and And Mike mike '
+occs = ['mike', 'and', 'afda']
 
+# score = scraper.get_matched_occs(text, occs, n=5)
+# sum([s[1] for s in score])
+
+text = scraper.clean_words(text)
+counts = sum([text.count(occ) for occ in occs])
+counts
+
+# vec = CountVectorizer()
+# vec.fit_transform([text])
+# score = vec.transform(occs).toarray()#.sum()
+# score_sum = score.sum()
+#%%
+counts
+
+#%%
+from itertools import groupby
+x = sorted(x, key=lambda k: k[0])
+a = [list(zip(*group)) for key, group in groupby(x, key=lambda k: k[0]==0)]
+a
+
+#%%
 
 
 mails_df = reader.get_emails_from_folder(mail, folder_name='Priority Mail', latest_first=True, cap_at=3)
@@ -57,6 +83,10 @@ scraper.clean_words(['Clean this Sentealsdfkja #@32 ', 'hi@#', 'fhit'])
 
 # %%
 
+text = 'Are sentiments apartments decisively the especially alteration. Thrown shy denote ten ladies though ask saw.'
+occs = ['are', 'the', 'ten', 'hi']
+
+scraper.get_matched_occs(text, occs, 2)
 
 
 #%%

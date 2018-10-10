@@ -10,4 +10,6 @@ Version 1.1.0
 - features 3 scoring metrics
 - original text words part of dataset
 - prelim analysis for text data from links, such as length of words, etc
-- Pulls words directly from urls and saves them
+- double click allows user to access links
+
+- Changed Scoring Metric: words now have to be at least length 3
