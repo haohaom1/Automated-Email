@@ -220,6 +220,7 @@ class Scraper:
         # urls is a 1D list of urls
         # returns a list of list of words
         for url in urls:
+
             try:
                 words = self.get_text_from_url(url, clean=False)
                 if not words:
@@ -235,7 +236,7 @@ class Scraper:
                     return words
                 list_of_words.append(words)
 
-            except:
+            except (URLError, HTTPError):
                 warnings.warn('Unable to load {}'.format(url))
                 if split_up_links:
                     return None
@@ -387,16 +388,23 @@ class Scraper:
 
             df = temp_df
 
-        df['text'] = df['url'].apply(lambda x: self.scrape_words_from_urls(x, split_up_links=split_up_links))
+        texts = []
+        for i, url in enumerate(df['url']):
+            texts.append(self.scrape_words_from_urls(url, split_up_links))
+            print('loaded row', i)
+        df['text'] = texts
+        # df['text'] = df['url'].apply(lambda x: self.scrape_words_from_urls(x, split_up_links=split_up_links))
 
         scores = []
         args = []
         urls = []
+        constituent_id = []
 
         for i in range(len(df)):
             print('processing link {}'.format(i))
 
             current_row = df.iloc[i]
+
             mdf = self.create_matched_df(current_row['first_name'], current_row['last_name'])
 
             # kill this function if it's running for too long
@@ -407,17 +415,16 @@ class Scraper:
             args.append(arg)
             urls.append(current_row['url'])
 
-        assert(len(df) == len(scores))  # verifies that the length of each are the same
+            if not np.isnan(arg):
+                c_id = mdf.iloc[int(arg)]['ID']
 
-        # scores_df = pd.DataFrame(scores, columns=['Occupation score', 'Occupation score adjusted', 'Colby score'])
-        # # scores_df['first_name'] = df.loc[:len(scores_df), 'first_name']
-        # # scores_df['last_name'] = df.loc[:len(scores_df), 'last_name']
-        # scores_df['first_name'] = df['first_name']
-        # scores_df['last_name'] = df['last_name']
-        #
-        # scores_df['url'] = df['url']
-        # scores_df['arg'] = args
-        # scores_df['id'] = df['id']
+            # arg does not exist for the constituent
+            else:
+                c_id = np.NAN
+            constituent_id.append(c_id)
+
+
+        assert(len(df) == len(scores))  # verifies that the length of each are the same
 
         # add lists of urls if we didn't split up links
         if not split_up_links:
@@ -426,6 +433,7 @@ class Scraper:
 
         # adds the scores
         df[['Occupation score', 'Occupation score adjusted', 'Colby score']] = pd.DataFrame(scores, index=df.index)
+        df['constituent_id'] = constituent_id
 
         # if given a label (for training) add label as a column
         if label:
