@@ -532,7 +532,7 @@ class DisplayApp:
             self.refreshFrame(self.rightmainframe)
 
             # displays the scores graph
-            self.handleViewScore()
+            # self.handleViewScore()
 
             # puts focus onto the bottom frame
             self.bottomFrame.focus_set()
