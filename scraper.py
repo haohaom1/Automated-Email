@@ -210,16 +210,17 @@ class Scraper:
         # for handling when the function takes too long to respond
         def handler(signum, frame):
             warnings.warn("Unable to load website")
-
-        # terminates the function if it runs for more than 60 seconds
-        signal.signal(signal.SIGALRM, handler)
-        signal.alarm(60)
+            raise TimeoutError('Url took too long to load')
 
         list_of_words = []
 
         # urls is a 1D list of urls
         # returns a list of list of words
         for url in urls:
+
+            # terminates the function if it runs for more than 60 seconds
+            signal.signal(signal.SIGALRM, handler)
+            signal.alarm(60)
 
             try:
                 words = self.get_text_from_url(url, clean=False)
@@ -236,7 +237,7 @@ class Scraper:
                     return words
                 list_of_words.append(words)
 
-            except (URLError, HTTPError):
+            except (URLError, HTTPError, TimeoutError):
                 warnings.warn('Unable to load {}'.format(url))
                 if split_up_links:
                     return None

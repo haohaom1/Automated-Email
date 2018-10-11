@@ -11,6 +11,9 @@
 '''
 TO DO LIST
 
+- Fix Pathing Error in Windows
+- Use threading instead of sigalarm since it doesnt work reliable
+- Debug functionalities on Windows machines, such as key binds, etc
 - Add a waiting animation when Classifying Emails
 - fix bug of why i cant just classify 1 mail
 
@@ -21,6 +24,12 @@ IDEAS FOR FUTURE
     - idea 1: create a separate bot that identifies whether an article is
     - idea 2: rotate IP addresses, delay scrape time
 - optimize retrieving data (maybe line by line) so a crash wont lose all the data
+
+BEFORE USING
+
+- have a working python interpreter
+- have all the dependencies
+- download nltk packages, such as stopword and punkt
 
 '''
 
@@ -522,11 +531,11 @@ class DisplayApp:
         elif w == self.tree:
             self.refreshFrame(self.rightmainframe)
 
-            # puts focus onto the bottom frame
-            self.bottomFrame.focus_set()
-
             # displays the scores graph
             self.handleViewScore()
+
+            # puts focus onto the bottom frame
+            self.bottomFrame.focus_set()
 
             # selects scores from the current row
             curItem = self.tree.focus()
