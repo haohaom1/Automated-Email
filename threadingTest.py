@@ -4,6 +4,7 @@ import time
 import multiprocessing
 import threading_timer
 import sys
+from datetime import datetime
 
 class DisplayApp:
 
@@ -27,19 +28,22 @@ class DisplayApp:
 
         tk.Button(self.root, text='press me', command=self.bar2).pack()
 
-    @threading_timer.exit_after(3)
-    def bar(self):
-        print('starting...')
+    # @threading_timer.exit_after(3)
+    def bar(self, arg):
+        t = threading.currentThread()
+        while getattr(t, "do_run", True):
+            print("working on %s" % arg)
+            break
 
-        time.sleep(10)
-
-        print('slept for', 100, 'seconds')
+        print("Stopping as you wish.")
+        return
 
     def bar2(self):
-        try:
-            self.bar()
-        except KeyboardInterrupt:
-            print('took too long')
+        t = threading.Thread(target=self.bar, args=("task",))
+        t.start()
+        time.sleep(5)
+        t.do_run = False
+        t.join()
 
     def main(self):
         self.root.mainloop()

@@ -1,0 +1,8 @@
+first_name,last_name,id,url,Occupation score,Occupation score adjusted,Colby score,confidence,label,time,moved,arg
+Andrew,Davis,b'7196',https://www.mcdowellnews.com/sports/work-week-morgan-happy-with-titans-efforts-during-first-week/article_e9d144a8-9749-11e8-802a-53dc90b54eca.html,1.0,0.05882352941176471,0.0,0.9334996754624938,0,2018-08-13 20:21:54,True,0
+Michael,Gordon,b'7195',https://www.tvnz.co.nz/one-news/sport/league/parramatta-eels-win-over-titans-boost-hopes-avoiding-nrl-wooden-spoon,2.0,0.13333333333333333,0.0,0.8734638703090208,0,2018-08-13 20:21:54,True,0
+Michael,Gordon,b'7195',http://leagueunlimited.com/news/32317-results-2018-national-rugby-league-round-21/,1.0,0.06666666666666668,0.0,0.9305830170261244,0,2018-08-13 20:21:54,True,0
+Michael,Gordon,b'7193',https://www.easternriverinachronicle.com.au/story/5560687/gordon-open-to-titans-shift-for-2019-nrl/%3Fcs%3D4783,2.0,0.13333333333333333,0.0,0.8734638703090208,0,2018-08-13 20:21:54,True,0
+Michael,Gordon,b'7193',http://www.dailymail.co.uk/wires/aap/article-6013531/Committed-Gordon-open-Titans-shift.html,1.0,0.06666666666666668,0.0,0.9305830170261244,0,2018-08-13 20:21:54,True,0
+Michael,Gordon,b'7193',https://www.nrl.com/news/2018/08/01/gordon-insists-hes-going-nowhere/,2.0,0.13333333333333333,0.0,0.8734638703090208,0,2018-08-13 20:21:54,True,0
+Michael,Gordon,b'7193',http://wset.com/sports/content/two-lynchburg-swimmers-heading-to-junior-nationals,1.0,0.06666666666666668,0.0,0.9305830170261244,0,2018-08-13 20:21:54,True,0

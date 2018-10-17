@@ -6,10 +6,15 @@ from emailreader import Emailreader
 from datetime import datetime
 import numpy as np
 
+import pathlib
+
 scraper = Scraper()
 reader = Emailreader()
 
-constituent_df = pd.read_csv('datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv')
+constituent_df = pd.read_csv(pathlib.PureWindowsPath(pathlib.Path('datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv'))
+)
+
+
 
 def score(df, clf, return_proba=False, remove_nan=True):
     '''
@@ -114,6 +119,8 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
     :return: dataframe containing UID of the emails, Scores, probability,
     and confidence, decision, and timestamp, constituent info, sorted by confidence,
     '''
+    from datetime import datetime
+    print('starting classify', datetime.now())
 
     if not clf:
         clf = joblib.load('Classifiers/LR_7_30.pkl')
@@ -123,15 +130,10 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
     scores_df = scraper.create_scores_data(links, split_up_links=True)
 
-    # print('scores___df', scores_df)
-    # print('uids', scores_df['id'])
-
     invalids = scores_df[scores_df['Colby score'].isnull()]
     if move:
         for uid in invalids['id']:
             reader.move_email_to_folder(mail, folder, target_folder='Further Review Needed', email_uid=uid)
-
-    # print('scores df', scores_df)
 
     # dropnas
     scores_df.dropna(inplace=True)
@@ -161,16 +163,17 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
         # logs the data if the dataframe is not empty
         if not df.empty:
-            date = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+            date = datetime.strftime(datetime.now(), '%Y-%m-%d %H.%M.%S')
 
             # saves to the logs
-            df.to_csv('logs/{}_logs.csv'.format(date), index=False)
-
+            windows_path = pathlib.PureWindowsPath(pathlib.Path('logs/{}_logs.csv'.format(date)))
+            df.to_csv(windows_path, index=False)
 
             # if to_raiser is true AND there is an available data from logs, then return the data to be
             # exported to Raisers edge as well
             if to_raiser:
-                return df, create_csv_for_raiser('logs/{}_logs.csv'.format(date))
+                window_path = pathlib.PureWindowsPath(pathlib.Path('logs/{}_logs.csv'.format(date)))
+                return df, create_csv_for_raiser(windows_path)
 
             if log_filename:
                 return df, '{}_logs.csv'.format(date)

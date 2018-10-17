@@ -950,7 +950,7 @@ class ClassifyDialog(simpledialog.Dialog):
         def callback(*args):
             try:
                 t = self.cap_at.get()
-                waitTime.set('Approx. Wait Time: {:.0f} mins'.format(np.ceil(t / 8)))  # approx wait time
+                waitTime.set('Approx. Wait Time: {:.0f} mins'.format(np.ceil(t / 4)))  # approx wait time
 
             # this is a bug with tkinter, so i'm going to catch this exception
             except tk.TclError:
@@ -972,11 +972,8 @@ class ClassifyDialog(simpledialog.Dialog):
         self.cap_at.trace_add('write', callback)
 
     def validate(self):
-        # if self.checked.get() > 0:
-        #     return True
-        # else:
-        #     return False
-        return True
+        # makes sure the user chooses at least 1 email to classify
+        return True if self.cap_at.get() > 0 else False
 
 
     def apply(self):
