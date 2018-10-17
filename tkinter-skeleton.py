@@ -965,12 +965,8 @@ class ClassifyDialog(simpledialog.Dialog):
         self.msgLabel.config(text='Approx. Wait Time: {} mins'.format(np.ceil(self.cap_at.get() / 10)))
 
     def validate(self):
-        # if self.checked.get() > 0:
-        #     return True
-        # else:
-        #     return False
-        return True
-
+        # validates that the user chose at least 1 email
+        return True if self.cap_at.get() > 0 else False
 
     def apply(self):
 
