@@ -11,16 +11,24 @@
 '''
 TO DO LIST
 
+- Add functionality that allows emails to be moved
+- Fix Pathing Error in Windows
+- Debug functionalities on Windows machines, such as key binds, etc
 - Add a waiting animation when Classifying Emails
 - fix bug of why i cant just classify 1 mail
 
 IDEAS FOR FUTURE
 
-- Add functionality that allows emails to be moved
 - Fix Anti-scrape policy
     - idea 1: create a separate bot that identifies whether an article is
     - idea 2: rotate IP addresses, delay scrape time
 - optimize retrieving data (maybe line by line) so a crash wont lose all the data
+
+BEFORE USING
+
+- have a working python interpreter
+- have all the dependencies
+- download nltk packages, such as stopword and punkt
 
 '''
 
@@ -297,7 +305,7 @@ class DisplayApp:
         self.root.bind('<Double-Button-1>', self.doubleClick)
 
         # binds control-e to switch the label of an element in the bottom table
-        # self.bottomFrame.bind('<Control-e>', self.switchLabel)
+        self.bottomFrame.bind('<Control-e>', self.switchLabel)
 
 
     def handleQuit(self, event=None):
@@ -379,12 +387,6 @@ class DisplayApp:
 
         # binds Button1 to the tree
         self.tree.bind('<<TreeviewSelect>>', self.onselect)
-
-        # binds right click to bottom table
-        # self.root.bind('<Double-Button-1>', self.doubleClick)
-
-        # binds control-e to switch the label of an element in the bottom table
-        self.bottomFrame.bind('<Control-e>', self.switchLabel)
 
     def buildScoresTable(self, curItem):
         '''
@@ -510,19 +512,25 @@ class DisplayApp:
     def onselect(self, event):
         w = event.widget
 
+
         # for when the logs listbox is selected
         if w == self.logs_lbox:
-            index = int(w.curselection()[0])
-            value = w.get(index)
-            self.current_log = 'logs/' + value
-            self.df = pd.read_csv(self.current_log)
+            try:
+                index = int(w.curselection()[0])
+                value = w.get(index)
+                self.current_log = 'logs/' + value
+                self.df = pd.read_csv(self.current_log)
 
-            # refreshes the top info screen
-            self.refreshFrame(self.rightmainframe)
-            self.refreshFrame(self.leftmainframe)
+                # refreshes the top info screen
+                self.refreshFrame(self.rightmainframe)
+                self.refreshFrame(self.leftmainframe)
 
-            # builds table
-            self.buildBottomTable()
+                # builds table
+                self.buildBottomTable()
+
+            # this sometimes happens when the user clicks somewhere random
+            except IndexError:
+                pass
 
         # for when the bottom table is selected
         elif w == self.tree:
@@ -547,8 +555,6 @@ class DisplayApp:
             self.buildOccsLabel(curItem)
 
 
-
-
     def doubleClick(self, event):
         w = event.widget
 
@@ -564,11 +570,7 @@ class DisplayApp:
     def openUrl(self, curItem):
         row_num = self.tree.item(curItem)['text']
         url = self.df['url'][row_num]
-
-        # registers chrome
-        webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'), 1)
-
-        webbrowser.get('chrome').open_new(url)
+        webbrowser.open_new(url)
 
     def refreshFrame(self, frame, obj=None):
         '''
@@ -714,8 +716,6 @@ class DisplayApp:
         '''
         This function is used to switch the labels in the bottom table and the logs
         '''
-        print(event.widget)
-        # if event.widget == self.tree:
         print('switching labels')
 
         label_col = 5       # this is the column number for labels
@@ -935,38 +935,49 @@ class ClassifyDialog(simpledialog.Dialog):
 
         self.folder = tk.StringVar(value='Priority Mail')
         self.cap_at = tk.IntVar(value=0)
-
-        self.waitTime = tk.StringVar(value='Approx. Wait Time: 0 mins')      # approx wait time
+        self.cap_at.set(0)
 
         simpledialog.Dialog.__init__(self, parent, title)
 
+
+
     def body(self, master):
 
+        # initializes the approx. wait time string
+        waitTime = tk.StringVar(value='Approx. Wait Time: 0 mins')  # approx wait time
+
+        # used to update the stringVar waittime
+        def callback(*args):
+            try:
+                t = self.cap_at.get()
+                waitTime.set('Approx. Wait Time: {:.0f} mins'.format(np.ceil(t / 8)))  # approx wait time
+
+            # this is a bug with tkinter, so i'm going to catch this exception
+            except tk.TclError:
+                pass
+
+        # sets up the body of the dialogbox
         folders = ('Priority Mail', 'INBOX')
         tk.Label(master, text='Choose a Folder:').grid(row=0, column=0)
         menu = tk.OptionMenu(master, self.folder, *folders)
         menu.config(width=10)
         menu.grid(row=0, column=1)
-
         tk.Label(master, text='Classify How Many Emails:').grid(row=1, column=0)
         tk.Entry(master, textvariable=self.cap_at).grid(row=1, column=1)
 
-        # self.pb = ttk.Progressbar(master, orient='horizontal', mode='determinate')
-        # self.pb.grid(row=2, column=0, columnspan=3)
-        # tk.Label(master, text='Create Logs (Highly Recommended)').grid(row=2, column=0)
-        # checkbutton = tk.Checkbutton(master, text='Create Logs (Highly Recommended)',
-        #                              variable=self.checked)
-        # checkbutton.grid(row=2, column=1)
+        msgLabel = tk.Label(master, textvariable=waitTime)
+        msgLabel.grid(row=2, column=0, columnspan=5)
 
-        self.msgLabel = tk.Label(master, textvariable=self.waitTime)
-        self.msgLabel.grid(row=2, column=0, columnspan=5)
-        # self.msgLabel.grid_forget()     # hides the label for now
-
-        self.msgLabel.config(text='Approx. Wait Time: {} mins'.format(np.ceil(self.cap_at.get() / 10)))
+        # updates the wait time accordingly
+        self.cap_at.trace_add('write', callback)
 
     def validate(self):
-        # validates that the user chose at least 1 email
-        return True if self.cap_at.get() > 0 else False
+        # if self.checked.get() > 0:
+        #     return True
+        # else:
+        #     return False
+        return True
+
 
     def apply(self):
 
