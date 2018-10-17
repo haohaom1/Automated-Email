@@ -13,13 +13,11 @@ TO DO LIST
 
 - Add functionality that allows emails to be moved
 - Fix Pathing Error in Windows
-- Use threading instead of sigalarm since it doesnt work reliable
 - Debug functionalities on Windows machines, such as key binds, etc
 - Add a waiting animation when Classifying Emails
 - fix bug of why i cant just classify 1 mail
 
 IDEAS FOR FUTURE
-
 
 - Fix Anti-scrape policy
     - idea 1: create a separate bot that identifies whether an article is
