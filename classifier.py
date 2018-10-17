@@ -119,6 +119,8 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
     :return: dataframe containing UID of the emails, Scores, probability,
     and confidence, decision, and timestamp, constituent info, sorted by confidence,
     '''
+    from datetime import datetime
+    print('starting classify', datetime.now())
 
     if not clf:
         clf = joblib.load('Classifiers/LR_7_30.pkl')
@@ -128,18 +130,15 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
     scores_df = scraper.create_scores_data(links, split_up_links=True)
 
-    # print('scores___df', scores_df)
-    # print('uids', scores_df['id'])
-
     invalids = scores_df[scores_df['Colby score'].isnull()]
     if move:
         for uid in invalids['id']:
             reader.move_email_to_folder(mail, folder, target_folder='Further Review Needed', email_uid=uid)
 
-    # print('scores df', scores_df)
-
     # dropnas
     scores_df.dropna(inplace=True)
+
+    print('scores df', scores_df.values)
 
     labels, probas = score(df=scores_df, clf=clf, return_proba=True)
 
