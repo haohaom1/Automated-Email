@@ -14,9 +14,8 @@ reader = emailreader.Emailreader()
 mail = reader.login_email(username=username, password=password)
 
 #%% Retrieves emails
-
-received_emails = reader.get_emails_from_folder(mail=mail, folder_name='Received', cap_at=300, latest_first=False)
-completed_emails = reader.get_emails_from_folder(mail, folder_name='Completed', cap_at=300, latest_first=False)
+received_emails = reader.get_emails_from_folder(mail=mail, folder_name='Received', cap_at=5, latest_first=True)
+completed_emails = reader.get_emails_from_folder(mail, folder_name='Completed', cap_at=5, latest_first=True)
 
 ## %% Retrieves the urls and words
 received_links = reader.get_links(received_emails)
@@ -36,5 +35,5 @@ completed_df = completed_df[completed_df.first_name != 'Colby']
 completed_df.reset_index(drop=True, inplace=True)
 received_df.reset_index(drop=True, inplace=True)
 #%%
-received_df.to_csv('datasets_october/received_constituents_r.csv', index=False)
-completed_df.to_csv('datasets_october/completed_constituents_r.csv', index=False)#%%
+received_df.to_csv('datasets_october/received_constituents.csv', index=False)
+completed_df.to_csv('datasets_october/completed_constituents.csv', index=False)#%%

@@ -7,14 +7,12 @@ from bs4 import BeautifulSoup
 from urllib.request import Request, urlopen
 import string
 import nltk
-from sklearn.feature_extraction.text import CountVectorizer
 import warnings
 from urllib.error import HTTPError, URLError
 import ast
-import signal
 import ssl
-from collections import Counter
-
+import threading_timer
+from datetime import datetime
 
 # ## Scrapes data off of website
 
@@ -32,16 +30,20 @@ class Scraper:
 
         self.num_features = 3  # determines the number of features to use
 
-
-
+    # exits the function after 60 seconds; throws keyboard interrupt error if happens.
+    @threading_timer.exit_after(60)
     def get_text_from_url(self, url, clean=True):
-        hdr = {'User-Agent': 'Mozilla/5.0'}
-        hdr['User-agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A'
+        hdr = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A'}
 
         try:
 
+            # with urlopen(url) as html:
+            #     html = html.read()
+            # bs = BeautifulSoup(html, "lxml")
+
             req = Request(url, headers=hdr)
-            page = urlopen(req)
+            with urlopen(req) as page:
+                page = page.read()
             soup = BeautifulSoup(page, 'lxml')  # creates a BS4 object
 
             words = []
@@ -189,9 +191,7 @@ class Scraper:
         return scores, arg
 
 
-
     ## returns a dataframe of all people that match the first and last name
-
     def create_matched_df(self, fname, lname):
         df1 = self.constituents_df.loc[(self.constituents_df['FIRST'] == fname) & (self.constituents_df['LAST'] == lname)]
         df2 = self.constituents_df.loc[(self.constituents_df['NICKNAME'] == fname) & (self.constituents_df['LAST'] == lname)]
@@ -207,20 +207,11 @@ class Scraper:
         if split_up_links:
             urls = [urls]
 
-        # for handling when the function takes too long to respond
-        def handler(signum, frame):
-            warnings.warn("Unable to load website")
-            raise TimeoutError('Url took too long to load')
-
         list_of_words = []
 
         # urls is a 1D list of urls
         # returns a list of list of words
         for url in urls:
-
-            # terminates the function if it runs for more than 60 seconds
-            signal.signal(signal.SIGALRM, handler)
-            signal.alarm(60)
 
             try:
                 words = self.get_text_from_url(url, clean=False)
@@ -237,17 +228,12 @@ class Scraper:
                     return words
                 list_of_words.append(words)
 
-            except (URLError, HTTPError, TimeoutError):
+            except (URLError, HTTPError, KeyboardInterrupt) as error:
                 warnings.warn('Unable to load {}'.format(url))
+                print(error)
                 if split_up_links:
                     return None
                 list_of_words.append('')
-
-            # resets alarm
-            signal.alarm(0)
-
-        # urls is a list of list of urls, one list per email
-        # returns a list of list of list of words
 
         return list_of_words
 
@@ -312,7 +298,6 @@ class Scraper:
     #             list_of_words.append(temp_words)
     #
     #     return list_of_words
-
 
     def score_all_urls(self, words, matched_df, sum_array=False, links_split_up=False):
         '''
