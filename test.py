@@ -16,13 +16,23 @@ from datetime import datetime
 import os
 import warnings
 import webbrowser
-# nltk.download('punkt')
-#%%
+##%%
 scraper = Scraper()
 reader = Emailreader()
 username = 'prospectstudent@colby.edu'
 password = 'Student.2017'
 mail = reader.login_email(username, password)
+#%%
+a = 'b\'123'
+str.encode(a)
+print(a)
+a.decode()
+
+#%%
+mail.list()
+mail.select('INBOX')
+#%%
+df['id'].apply(lambda s: s.decode())
 
 #%%
 # x = zip(np.random.choice(a=[1], size=10), np.random.randn(10))

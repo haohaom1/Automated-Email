@@ -204,8 +204,6 @@ class Scraper:
         # scrapes words from a list of urls
         # returns a list of list of words
 
-        print('starting scrape', datetime.now())
-
         if split_up_links:
             urls = [urls]
 
@@ -233,12 +231,10 @@ class Scraper:
             except (URLError, HTTPError, KeyboardInterrupt) as error:
                 warnings.warn('Unable to load {}'.format(url))
                 print(error)
-                print('reached', datetime.now())
                 if split_up_links:
                     return None
                 list_of_words.append('')
 
-        print('end scrape', datetime.now())
         return list_of_words
 
 

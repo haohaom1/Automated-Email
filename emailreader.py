@@ -31,8 +31,6 @@ class Emailreader:
         return mail
 
 
-    # In[4]:
-
     def switch_folders(self, mail, folder_name):
         '''
         Switches the folders of the email
@@ -45,7 +43,11 @@ class Emailreader:
         params: folder_name
         return: pandas series containing the email uid as the index and the email_message object as the data
         '''
-        mail.select('"Google Alerts/{}"'.format(folder_name))
+
+        if folder_name == 'INBOX':
+            mail.select('INBOX')
+        else:
+            mail.select('"Google Alerts/{}"'.format(folder_name))
         result, data = mail.uid('search', None, "ALL")  # search and return uids instead
 
         ids = data[0].split()
@@ -61,8 +63,12 @@ class Emailreader:
         raw_emails = [str(d[0][1], 'utf-8') for d in data]
         email_messages = [email.message_from_string(raw) for raw in raw_emails]
 
+        # decodes the ids into string
+        ids = [x.decode() for x in ids]
+
         df = pd.DataFrame({'mail': email_messages,
                            'id': ids})
+
 
         print('You have {} messages in folder {}'.format(num_emails, folder_name))
 
