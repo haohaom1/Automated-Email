@@ -162,14 +162,14 @@ class DisplayApp:
         # the first sublist is the set of items for the file menu
         # the second sublist is the set of items for the option menu
         menutext = [['Update Current Table', 'score', 'Quit  Ctl-Q'],
-                    ['Clear', 'Switch Label Ctrl-e', '-']]
+                    ['Clear', 'Switch Label Ctrl-e', 'Switch Moved State Ctrl-w']]
 
         # menu callback functions (note that some are left blank,
         # so that you can add functions there if you want).
         # the first sublist is the set of callback functions for the file menu
         # the second sublist is the set of callback functions for the option menu
         menucmd = [[self.updateTable, self.handleViewScore, self.handleQuit],
-                   [self.clear, self.switchLabel, None]]
+                   [self.clear, self.switchLabel, self.switchMovedState]]
 
         # build the menu elements and callbacks
         for i in range(len(menulist)):
@@ -298,6 +298,8 @@ class DisplayApp:
         # bind command sequences to the root window
         self.root.bind('<Control-q>', self.handleQuit)
 
+        self.root.bind('<Control-s>', self.updateTable)
+
         # binds the logs listbox to onselect
         self.logs_lbox.bind('<<ListboxSelect>>', self.onselect)
 
@@ -306,6 +308,7 @@ class DisplayApp:
 
         # binds control-e to switch the label of an element in the bottom table
         self.bottomFrame.bind('<Control-e>', self.switchLabel)
+        self.bottomFrame.bind('<Control-w>', self.switchMovedState)
 
 
     def handleQuit(self, event=None):
@@ -633,14 +636,14 @@ class DisplayApp:
             messagebox.showwarning('Warning', 'Please select or create a valid log')
             return
 
-        raiser_df = classifier.create_csv_for_raiser(logs=self.current_log, return_merged_df=False)
+        raiser_df, merged_df = classifier.create_csv_for_raiser(logs=self.current_log, return_merged_df=True)
 
         if raiser_df.empty:
             # No available data
             messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge')
             return
 
-        d = RaiserDialog(self.root, df=raiser_df, title='Raiser Edge CSV')
+        d = RaiserDialog(self.root, df=merged_df, merged_df=True, title='Raiser Edge CSV')
 
     def handleConfidence(self):
         if self.df is None:
@@ -744,29 +747,31 @@ class DisplayApp:
     def switchMovedState(self, event=None):
 
         # verifies that the user wants to switch states
-        result = tk.messagebox.askquestion('', 'Are you sure you want to change the state?')
-        if result == 'yes':
+        # result = tk.messagebox.askquestion('', 'Are you sure you want to change the state?')
+        # if result == 'yes':
 
-            label_col = 6  # this is the column number for labels
+        label_col = 6  # this is the column number for labels
 
-            curItem = self.tree.focus()
+        curItem = self.tree.focus()
 
-            # if nothing is currently selected
-            if not curItem:
-                return
+        # if nothing is currently selected
+        if not curItem:
+            return
 
-            row_num = self.tree.item(curItem)['text']  # the row number in the treeview
-            row_values = self.tree.item(curItem)['values']  # the values of that row
+        row_num = self.tree.item(curItem)['text']  # the row number in the treeview
+        row_values = self.tree.item(curItem)['values']  # the values of that row
 
-            orig_value = row_values[label_col]  # the predicted label of selected row
-            new_label = not orig_value  # the updated label (either True or False)
+        orig_value = row_values[label_col]  # the predicted label of selected row
+        # print('value', orig_value, type(orig_value))
+        new_label = 'False' if orig_value == 'True' else 'True'  # the updated label (either True or False)
+        # print('new label', new_label)
 
-            row_values[label_col] = new_label  # the new label of
-            shaded = 'even_row' if row_num % 2 == 0 else 'odd_row'  # whether or not to shade the tree row
-            self.tree.delete(curItem)
-            self.tree.insert('', row_num, text=row_num, values=row_values, tag=shaded)
+        row_values[label_col] = new_label  # the new label of
+        shaded = 'even_row' if row_num % 2 == 0 else 'odd_row'  # whether or not to shade the tree row
+        self.tree.delete(curItem)
+        self.tree.insert('', row_num, text=row_num, values=row_values, tag=shaded)
 
-            self.df.ix[row_num, 'label'] = new_label  # updates the new value in the locally stored dataframe
+        self.df.ix[row_num, 'moved'] = new_label  # updates the new value in the locally stored dataframe
 
         pass
 
@@ -834,7 +839,15 @@ class CustomDialog(simpledialog.Dialog):
 # dialog box for displaying CSVs
 class RaiserDialog(simpledialog.Dialog):
 
-    def __init__(self, parent, csv_path=None, df=None, title='Title'):
+    def __init__(self, parent, csv_path=None, df=None, merged_df=False, title='Title'):
+        '''
+
+        :param parent: parent widget
+        :param csv_path: the csv path of the raiser_df, optional
+        :param df: the actual raiser df object
+        :param merged_df: whether or not the passed raiser_df is the merged version, or has already been processed already
+        :param title: title of this widget
+        '''
 
         preset_path = 'raisers_edge/' + datetime.strftime(datetime.now(), '%Y-%m-%d') + '_raiser.csv'
         self.path = tk.StringVar(master=parent,
@@ -845,6 +858,13 @@ class RaiserDialog(simpledialog.Dialog):
             self.df = pd.read_csv(csv_path)
         else:
             self.df = df
+
+        if merged_df:
+            self.merged_df = df
+            raiser_headers = ['constituent_id', 'date', 'move/status change (or n/a)', 'type',
+                              'author', 'description', 'text']
+            self.df = self.df.loc[:, raiser_headers]
+
 
         simpledialog.Dialog.__init__(self, parent, title)
 
@@ -891,6 +911,7 @@ class RaiserDialog(simpledialog.Dialog):
         self.errorlabel.pack(side=tk.BOTTOM)
         self.errorlabel.pack_forget()
 
+
     def buttonbox(self):
         '''
         override if you do not want the standard buttons
@@ -911,6 +932,7 @@ class RaiserDialog(simpledialog.Dialog):
     def validate(self):
         try:
             if self.path.get()[-4:] == '.csv':
+
                 return True
             else:
                 self.errorlabel.pack()
@@ -927,6 +949,10 @@ class RaiserDialog(simpledialog.Dialog):
 
         self.df.to_csv(self.path.get(), index=False)
         print('downloaded at ', self.path.get())
+
+        # moves the emails as well
+        classifier.move_emails(mail=mail, df=self.merged_df)
+        print('moved emails')
 
 
 class ClassifyDialog(simpledialog.Dialog):

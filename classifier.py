@@ -154,6 +154,10 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
     # IF TIME PERMITTED USE WORDS FROM THE START TO BE MORE EFFICIENT
     df['text'] = df['url'].apply(lambda x: ' '.join(scraper.get_text_from_url(x, clean=False)))
 
+    # documents the mail source
+    df['folder'] = folder
+
+
     # sorts df by probability
     # df.sort_values(['proba'], inplace=True)
 
@@ -195,6 +199,8 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
 
     # returns null if there are no values in the log to be moved
     if df.empty:
+        if return_merged_df:
+            return df, df
         return df
 
     dates = datetime.strftime(datetime.now(), '%m/%d/%Y')
@@ -232,6 +238,27 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
 
     if return_merged_df:
 
-        return df
+        return raisers_df, df
 
     return raisers_df
+
+
+def move_emails(mail, df):
+    '''
+    Uses the Raiser CSV to determine which emails to move to which folder
+    '''
+
+    # converts str to boolean
+    df['moved'].apply(lambda x: x == 'True')
+
+    for _, row in df.iterrows():
+        folder = df['folder']
+
+        if row['label'] == 0 and row['moved']:
+            target_folder = 'Received'
+        elif row['label'] == 1 and row['moved']:
+            target_folder = 'Completed'
+        else:
+            target_folder = 'Further Review Needed'
+
+        reader.move_email_to_folder(mail=mail, orig_folder=folder, target_folder=target_folder, email_uid=row['id'])
