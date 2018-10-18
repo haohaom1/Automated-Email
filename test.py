@@ -15,14 +15,24 @@ import classifier
 from datetime import datetime
 import os
 import warnings
-
-
-
+import webbrowser
+##%%
 scraper = Scraper()
 reader = Emailreader()
 username = 'prospectstudent@colby.edu'
 password = 'Student.2017'
 mail = reader.login_email(username, password)
+#%%
+a = 'b\'123'
+str.encode(a)
+print(a)
+a.decode()
+
+#%%
+mail.list()
+mail.select('INBOX')
+#%%
+df['id'].apply(lambda s: s.decode())
 
 #%%
 # x = zip(np.random.choice(a=[1], size=10), np.random.randn(10))
@@ -41,7 +51,7 @@ counts
 # score = vec.transform(occs).toarray()#.sum()
 # score_sum = score.sum()
 #%%
-pd.read_csv('datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv').iloc[0]
+counts
 
 #%%
 from itertools import groupby
@@ -108,7 +118,7 @@ mail = reader.login_email(username, password)
 
 clf = joblib.load('Classifiers/LR_7_30.pkl')
 df1 = classifier.classify_mails(mail, clf=clf, folder='Priority Mail',
-                                cap_at=10, log_data=True, to_raiser=False, move=False)
+                                cap_at=10, log_data=True, to_raiser=False, move=True)
 
 #%%
 df1.loc[df1['moved']]

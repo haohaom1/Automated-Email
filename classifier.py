@@ -6,10 +6,15 @@ from emailreader import Emailreader
 from datetime import datetime
 import numpy as np
 
+import pathlib
+
 scraper = Scraper()
 reader = Emailreader()
 
-constituent_df = pd.read_csv('datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv')
+# constituent_df = pd.read_csv(pathlib.PureWindowsPath(pathlib.Path('datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv'))
+# )
+constituent_df = 'datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv'
+
 
 def score(df, clf, return_proba=False, remove_nan=True):
     '''
@@ -123,15 +128,10 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
     scores_df = scraper.create_scores_data(links, split_up_links=True)
 
-    # print('scores___df', scores_df)
-    # print('uids', scores_df['id'])
-
     invalids = scores_df[scores_df['Colby score'].isnull()]
     if move:
         for uid in invalids['id']:
             reader.move_email_to_folder(mail, folder, target_folder='Further Review Needed', email_uid=uid)
-
-    # print('scores df', scores_df)
 
     # dropnas
     scores_df.dropna(inplace=True)
@@ -148,9 +148,16 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
     df = classify_mails_from_data(mail=mail, df=scores_df, folder=folder, threshold=threshold, move=move)
 
+    # turn constituent_id to int
+    df['constituent_id'] = df['constituent_id'].astype(np.int64)
+
     # gets the actual words from the urls
     # IF TIME PERMITTED USE WORDS FROM THE START TO BE MORE EFFICIENT
     df['text'] = df['url'].apply(lambda x: ' '.join(scraper.get_text_from_url(x, clean=False)))
+
+    # documents the mail source
+    df['folder'] = folder
+
 
     # sorts df by probability
     # df.sort_values(['proba'], inplace=True)
@@ -161,16 +168,18 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
         # logs the data if the dataframe is not empty
         if not df.empty:
-            date = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+            date = datetime.strftime(datetime.now(), '%Y-%m-%d %H.%M.%S')
 
             # saves to the logs
-            df.to_csv('logs/{}_logs.csv'.format(date), index=False)
-
+            # windows_path = pathlib.PureWindowsPath(pathlib.Path('logs/{}_logs.csv'.format(date)))
+            windows_path = 'logs/{}_logs.csv'.format(date)
+            df.to_csv(windows_path, index=False)
 
             # if to_raiser is true AND there is an available data from logs, then return the data to be
             # exported to Raisers edge as well
             if to_raiser:
-                return df, create_csv_for_raiser('logs/{}_logs.csv'.format(date))
+                window_path = pathlib.PureWindowsPath(pathlib.Path('logs/{}_logs.csv'.format(date)))
+                return df, create_csv_for_raiser(windows_path)
 
             if log_filename:
                 return df, '{}_logs.csv'.format(date)
@@ -192,6 +201,8 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
 
     # returns null if there are no values in the log to be moved
     if df.empty:
+        if return_merged_df:
+            return df, df
         return df
 
     dates = datetime.strftime(datetime.now(), '%m/%d/%Y')
@@ -229,6 +240,33 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
 
     if return_merged_df:
 
-        return df
+        return raisers_df, df
 
     return raisers_df
+
+
+def move_emails(mail, df):
+    '''
+    Uses the Raiser CSV to determine which emails to move to which folder
+    '''
+
+    # converts str to boolean
+    df['moved'].apply(lambda x: x == 'True')
+
+    for _, row in df.iterrows():
+        folder = row['folder']
+        email_uid = str.encode(str(row['id']))
+
+        if row['label'] == 0 and row['moved']:
+            target_folder = 'Received'
+        elif row['label'] == 1 and row['moved']:
+            target_folder = 'Completed'
+        else:
+            target_folder = 'Further Review Needed'
+
+        # print('moving from', folder, 'to', target_folder)
+        # print(row['id'], type(row['id']))
+        # byte_id = str.encode('1779')
+        # print(byte_id, type(byte_id))
+
+        reader.move_email_to_folder(mail=mail, orig_folder=folder, target_folder=target_folder, email_uid=email_uid)
