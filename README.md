@@ -21,3 +21,14 @@ WINDOWS VERSION
 -FIXED BUG binds not working: set focus AFTER displaying graph
 
 - Changed Scoring Metric: words now have to be at least length 3
+
+
+Version 1.3.0
+10-18-18
+
+WINDOWS VERSION
+
+- decoded email id into string data type
+    - this will be encoded back to byte data later
+- made constituent id into int data type
+- Added option to choose to automate things and the threshold from GUI
