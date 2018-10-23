@@ -11,7 +11,8 @@
 '''
 TO DO LIST
 
-- Add functionality that allows emails to be moved
+- - Record whether the user chose to automatically move all emails in raiser CSV function
+
 - Fix Pathing Error in Windows (control f 'logs/')
 - Debug functionalities on Windows machines, such as key binds, etc
 - Add a waiting animation when Classifying Emails
@@ -23,6 +24,8 @@ IDEAS FOR FUTURE
     - idea 1: create a separate bot that identifies whether an article is
     - idea 2: rotate IP addresses, delay scrape time
 - optimize retrieving data (maybe line by line) so a crash wont lose all the data
+
+
 
 TO SWITCH FROM WINDOWS AND MAC
 
@@ -532,6 +535,9 @@ class DisplayApp:
                 self.refreshFrame(self.rightmainframe)
                 self.refreshFrame(self.leftmainframe)
 
+                # displays the confidence
+                self.handleViewScore()
+
                 # builds table
                 self.buildBottomTable()
 
@@ -860,7 +866,7 @@ class RaiserDialog(simpledialog.Dialog):
             self.merged_df = df
             raiser_headers = ['constituent_id', 'date', 'move/status change (or n/a)', 'type',
                               'author', 'description', 'text']
-            self.df = self.df.loc[:, raiser_headers]
+            self.df = self.df.loc[:, raiser_headers].reset_index(drop=True)
 
 
         simpledialog.Dialog.__init__(self, parent, title)
@@ -1008,7 +1014,7 @@ class ClassifyDialog(simpledialog.Dialog):
                 threshold_entry.grid_forget()
 
         # tk.Label(master, text='Automate Emails?').grid(row=3, column=0)
-        checkbutton = tk.Checkbutton(master, text='Automate Things!',
+        checkbutton = tk.Checkbutton(master, text='Move Emails Automatically!',
                                      variable=self.checked)
         checkbutton.grid(row=3, column=0, sticky='nsew')
 
@@ -1038,6 +1044,6 @@ class ClassifyDialog(simpledialog.Dialog):
 
 
 if __name__ == "__main__":
-    dapp = DisplayApp(800, 550)
+    dapp = DisplayApp(1600, 900)
     dapp.main()
 
