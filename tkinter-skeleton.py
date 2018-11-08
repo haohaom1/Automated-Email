@@ -11,7 +11,8 @@
 '''
 TO DO LIST
 
-- - Record whether the user chose to automatically move all emails in raiser CSV function
+- - Record whether the user chose to automatically move all emails in raiser CSV function: have two booleans
+move and move email: Set the column to move and only move emails if both are true
 
 - Fix Pathing Error in Windows (control f 'logs/')
 - Debug functionalities on Windows machines, such as key binds, etc
