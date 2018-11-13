@@ -30,10 +30,9 @@ class Scraper:
 
         self.num_features = 3  # determines the number of features to use
 
-    # exits the function after 60 seconds; throws keyboard interrupt error if happens.
-    @threading_timer.exit_after(60)
+    # @threading_timer.exit_after(60)
     def get_text_from_url(self, url, clean=True):
-        hdr = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A'}
+        hdr = {'User-Agent': 'Mozilla/5.0'}
 
         try:
 
@@ -212,6 +211,7 @@ class Scraper:
         # urls is a 1D list of urls
         # returns a list of list of words
         for url in urls:
+            print('url', url)
 
             try:
                 words = self.get_text_from_url(url, clean=False)
@@ -228,9 +228,9 @@ class Scraper:
                     return words
                 list_of_words.append(words)
 
-            except (URLError, HTTPError, KeyboardInterrupt) as error:
+            except:# (URLError, HTTPError, KeyboardInterrupt, TimeoutError) as error:
                 warnings.warn('Unable to load {}'.format(url))
-                print(error)
+                # print(error)
                 if split_up_links:
                     return None
                 list_of_words.append('')

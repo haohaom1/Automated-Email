@@ -11,12 +11,10 @@
 '''
 TO DO LIST
 
-- - Record whether the user chose to automatically move all emails in raiser CSV function
-
-- Fix Pathing Error in Windows (control f 'logs/')
-- Debug functionalities on Windows machines, such as key binds, etc
-- Add a waiting animation when Classifying Emails
-- fix bug of why i cant just classify 1 mail
+- Record whether the user chose to automatically move all emails in raiser CSV function: have two booleans
+move and move email: Set the column to move and only move emails if both are true
+- Add arrow keys as shortcut in table
+- When moving emails, concatenate emails based on their id and process each situation accordingly
 
 IDEAS FOR FUTURE
 
@@ -24,7 +22,7 @@ IDEAS FOR FUTURE
     - idea 1: create a separate bot that identifies whether an article is
     - idea 2: rotate IP addresses, delay scrape time
 - optimize retrieving data (maybe line by line) so a crash wont lose all the data
-
+- Add a waiting animation when Classifying Emails
 
 
 TO SWITCH FROM WINDOWS AND MAC
@@ -316,6 +314,7 @@ class DisplayApp:
         # binds control-e to switch the label of an element in the bottom table
         self.bottomFrame.bind('<Control-e>', self.switchLabel)
         self.bottomFrame.bind('<Control-w>', self.switchMovedState)
+        self.bottomFrame.bind('<Control-a>', self.moveAll)
 
 
     def handleQuit(self, event=None):
@@ -393,10 +392,15 @@ class DisplayApp:
             self.tree.insert('', i, text=i, values=tuple(row), tag=shaded)
 
         self.tree.tag_configure('even_row', background='lightgrey')
-        self.tree.pack(fill=tk.X, padx=5, pady=5)
+        self.tree.pack(fill=tk.X, side='left', expand=1)
 
         # binds Button1 to the tree
         self.tree.bind('<<TreeviewSelect>>', self.onselect)
+
+        # adds scrollbar to the tree
+        vsb = ttk.Scrollbar(self.bottomFrame, orient="vertical", command=self.tree.yview)
+        vsb.pack(side='right', fill=tk.Y)
+        self.tree.configure(yscrollcommand=vsb.set)
 
     def buildScoresTable(self, curItem):
         '''
@@ -653,7 +657,7 @@ class DisplayApp:
             messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge')
             return
 
-        d = RaiserDialog(self.root, df=merged_df, merged_df=True, title='Raiser Edge CSV')
+        d = RaiserDialog(self.root, df=merged_df, merged_df=True, main_df=self.df, title='Raiser Edge CSV')
 
     def handleConfidence(self):
         if self.df is None:
@@ -783,7 +787,11 @@ class DisplayApp:
 
         self.df.ix[row_num, 'moved'] = new_label  # updates the new value in the locally stored dataframe
 
-        pass
+    # switches all the states from true to false
+    def moveAll(self, event=None):
+        self.df['moved'] = 'True'
+        self.buildBottomTable()
+
 
     def exportEmails(self, event=None):
         '''
@@ -842,11 +850,12 @@ class CustomDialog(simpledialog.Dialog):
 # dialog box for displaying CSVs
 class RaiserDialog(simpledialog.Dialog):
 
-    def __init__(self, parent, csv_path=None, df=None, merged_df=False, title='Title'):
+    def __init__(self, parent, csv_path=None, df=None, main_df=None, merged_df=False, title='Title'):
         '''
 
         :param parent: parent widget
         :param csv_path: the csv path of the raiser_df, optional
+        :param main_df: the entire dataframe, containing both received and completed data
         :param df: the actual raiser df object
         :param merged_df: whether or not the passed raiser_df is the merged version, or has already been processed already
         :param title: title of this widget
@@ -857,6 +866,8 @@ class RaiserDialog(simpledialog.Dialog):
                                  value=preset_path,
                                  name='pathVar')    # path of raiser file to be exported
 
+        self.main_df = main_df      # df containing both received and completed data
+
         if df is None:
             self.df = pd.read_csv(csv_path)
         else:
@@ -864,10 +875,10 @@ class RaiserDialog(simpledialog.Dialog):
 
         if merged_df:
             self.merged_df = df
+
             raiser_headers = ['constituent_id', 'date', 'move/status change (or n/a)', 'type',
                               'author', 'description', 'text']
             self.df = self.df.loc[:, raiser_headers].reset_index(drop=True)
-
 
         simpledialog.Dialog.__init__(self, parent, title)
 
@@ -875,36 +886,48 @@ class RaiserDialog(simpledialog.Dialog):
         ## Builds the Table to display the CSV
 
         # builds two different frames
-        top_frame = tk.Frame(master=master)
+        top_frame = tk.Frame(master=master)     # used to contain the table
         top_frame.pack(side=tk.TOP, fill=tk.X)
-        bottom_frame = tk.Frame(master=master)
+        bottom_frame = tk.Frame(master=master)  # used to contain the path
         bottom_frame.pack(side=tk.TOP)
         error_frame = tk.Frame(master=master)
         error_frame.pack(side=tk.BOTTOM)
 
-        values = self.df.values
 
-        # builds column and row names
-        for c, col_name in enumerate(self.df.columns, start=1):
-            tk.Label(top_frame, text=col_name).grid(row=0, column=c)
+        # preprocesses the dataframe for displaying
+        df = self.df.rename(index=int, columns={'constituent_id': 'id'})  # make the columns shorter
+        df['text'] = self.df['text'].apply(lambda x: x[:min(len(x), 150)])  # limits the characters in the text column
 
-        for r, index_name in enumerate(self.df.index, start=1):
-            tk.Label(top_frame, text=index_name).grid(row=r, column=0)
+        # # builds column and row names
+        tree = ttk.Treeview(top_frame)
+        num_col = len(df.columns)
+        tree['columns'] = tuple(range(num_col))
+        for i, col in enumerate(self.df.columns):
+            # give extra width to text
+            width = 300 if col == 'text' else 110
+            stretch = col == 'text'
 
-        # adds the values
+            tree.column(i, width=width, minwidth=0, stretch=stretch)
+            tree.heading(i, text=col)
 
-        for i, val_row in enumerate(values, start=1):
-            for j, val in enumerate(val_row, start=1):
+        # builds the contents of the table
+        for i, row in df.iterrows():
+            shaded = 'even_row' if i % 2 == 0 else 'odd_row'
+            tree.insert('', i, text=i, values=tuple(row), tag=shaded)
 
-                # reformat the string if it is the text column
-                if isinstance(val, str):
-                    val = val[:40] + '...'
-                tk.Label(top_frame, text=val).grid(row=i, column=j)
+        tree.tag_configure('even_row', background='lightgrey')
+        tree.pack(fill=tk.X, side='left', expand=1)
 
+        # adds scrollbar to the tree
+        vsb = ttk.Scrollbar(top_frame, orient="vertical", command=tree.yview)
+        vsb.pack(side='right', fill=tk.Y)
+        tree.configure(yscrollcommand=vsb.set)
+
+        # makes the index column smaller
+        tree.column("#0", width=50)
 
         label = tk.Label(bottom_frame, text='Path: ')
         label.pack(side=tk.LEFT)
-
 
         e = tk.Entry(bottom_frame, textvariable=self.path, exportselection=0, width=35)
         e.pack(side=tk.LEFT)
@@ -954,9 +977,9 @@ class RaiserDialog(simpledialog.Dialog):
         print('downloaded at ', self.path.get())
 
         # moves the emails as well
-        classifier.move_emails(mail=mail, df=self.merged_df)
-        print('moved emails')
-
+        classifier.move_emails(mail=mail, df=self.main_df)
+        # print(self.main_df)
+        print('finished moving emails')
 
 class ClassifyDialog(simpledialog.Dialog):
 

@@ -145,6 +145,9 @@ class Emailreader:
     # Method for moving an email
     def move_email_to_folder(self, mail, orig_folder, target_folder, email_uid):
 
+        if not mail:
+            mail = self.mail
+
         if orig_folder.lower() == 'inbox':
             mail.select('"INBOX"')
         else:

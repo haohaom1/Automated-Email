@@ -251,7 +251,7 @@ def move_emails(mail, df):
     '''
 
     # converts str to boolean
-    df['moved'].apply(lambda x: x == 'True')
+    df['moved_bool'] = df['moved'].apply(lambda x: x == 'True')
 
     for _, row in df.iterrows():
         folder = row['folder']
@@ -269,4 +269,6 @@ def move_emails(mail, df):
         # byte_id = str.encode('1779')
         # print(byte_id, type(byte_id))
 
+        ### COMMENT OUT the line below to prevent emails from being moved
         reader.move_email_to_folder(mail=mail, orig_folder=folder, target_folder=target_folder, email_uid=email_uid)
+        print('moved emails')

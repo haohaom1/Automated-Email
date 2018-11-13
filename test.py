@@ -16,12 +16,56 @@ from datetime import datetime
 import os
 import warnings
 import webbrowser
+from urllib.request import Request, urlopen
+from bs4 import BeautifulSoup
+import requests
+
 ##%%
 scraper = Scraper()
 reader = Emailreader()
 username = 'prospectstudent@colby.edu'
 password = 'Student.2017'
 mail = reader.login_email(username, password)
+#%%
+df = pd.read_csv(r'logs\2018-11-08 13.09.54_logs.csv')
+df.head(15)
+#%%
+# print(df.columns)
+classifier.move_emails(mail, df)
+# reader.move_email_to_folder(mail, 'Priority Mail', 'Completed', b'1896')
+#%%
+
+
+url = 'http://www.ifre.com/bobs-big-bet-barclays-purchase-of-lehman-brothers-10-years-later/21356030.fullarticle'
+
+hdr = {'User-Agent': 'Mozilla/5.0'}
+
+try:
+    page = requests.get(url).text
+    soup = BeautifulSoup(page, 'lxml')  # creates a BS4 object
+except:
+    print('asfd')
+
+# try:
+#     r = requests.get(url, timeout=10.0)
+# except requests.Timeout as err:
+#     print(err)
+# except requests.RequestException as err:
+#     print(err)
+
+#%%
+import requests
+MAX_RETRIES = 20
+
+session = requests.Session()
+adapter = requests.adapters.HTTPAdapter(max_retries=MAX_RETRIES)
+session.mount('https://', adapter)
+session.mount('http://', adapter)
+
+r = session.get(url)
+soup = BeautifulSoup(r, 'lxml')
+
+
 #%%
 a = 'b\'123'
 str.encode(a)
