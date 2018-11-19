@@ -11,6 +11,8 @@
 '''
 TO DO LIST
 
+- Find solution to move emails consitantly with a uid
+- Change the algorithm so that it has to be in separate words, and not in the string
 - Record whether the user chose to automatically move all emails in raiser CSV function: have two booleans
 move and move email: Set the column to move and only move emails if both are true
 - Add arrow keys as shortcut in table
@@ -267,13 +269,22 @@ class DisplayApp:
                                command=com)
             button.pack(side=tk.TOP)
 
-        # creates listbox
-        self.logs_lbox = tk.Listbox(rightcntlframe, selectmode=tk.SINGLE, name='logs_listbox')
+        # creates listbox frame
+        lbox_frame = tk.Frame(rightcntlframe)
+        lbox_frame.pack(side=tk.TOP, fill=tk.X)
+        self.logs_lbox = tk.Listbox(lbox_frame, selectmode=tk.SINGLE, name='logs_listbox')
+        self.logs_lbox.pack(side=tk.LEFT, pady=10)
+
         all_logs = sorted(os.listdir('logs/'), reverse=True)    # makes sure the most recent log is first
         for filename in all_logs:
             if filename.endswith('csv'):
                 self.logs_lbox.insert(tk.END, filename)
-        self.logs_lbox.pack(side=tk.TOP, pady=10)
+
+        # attaches a scrollbar
+        sc = tk.Scrollbar(lbox_frame)
+        sc.pack(side=tk.RIGHT, fill=tk.Y)
+
+        sc.config(command=self.logs_lbox.yview)
 
 
     def buildMainPanel(self):
@@ -655,6 +666,7 @@ class DisplayApp:
         if raiser_df.empty:
             # No available data
             messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge')
+            classifier.move_emails(mail, df=self.df)    # moves all emails to received
             return
 
         d = RaiserDialog(self.root, df=merged_df, merged_df=True, main_df=self.df, title='Raiser Edge CSV')
