@@ -153,7 +153,7 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
     # gets the actual words from the urls
     # IF TIME PERMITTED USE WORDS FROM THE START TO BE MORE EFFICIENT
-    df['text'] = df['url'].apply(lambda x: ' '.join(scraper.get_text_from_url(x, clean=False)))
+    df['text'] = df['url'].apply(lambda x: ' '.join(scraper.get_text_from_url(x, clean=False, include_url=True)))
 
     # documents the mail source
     df['folder'] = folder
@@ -251,7 +251,7 @@ def move_emails(mail, df):
     '''
 
     # converts str to boolean
-    df['moved_bool'] = df['moved'].apply(lambda x: x == 'True')
+    df['moved'] = df['moved'].apply(lambda x: x == 'True')
 
     for _, row in df.iterrows():
         folder = row['folder']

@@ -27,6 +27,17 @@ username = 'prospectstudent@colby.edu'
 password = 'Student.2017'
 mail = reader.login_email(username, password)
 #%%
+
+# mails_df = reader.get_emails_from_folder(mail, folder_name='Priority Mail', latest_first=True, cap_at=3)
+# #%%
+# [reader.move_email_to_folder(mail, 'Priority Mail', 'To Be Moved', uid) for uid in mails_df['id']]
+# #%%
+# mails_df_2 = reader.get_emails_from_folder(mail, folder_name='To Be Moved', latest_first=True, cap_at=3)
+#
+# #%%
+# [reader.move_email_to_folder(mail, 'To Be Moved', 'Priority Mail', uid) for uid in mails_df['id']]
+
+#%%
 df = pd.read_csv(r'logs\2018-11-08 13.09.54_logs.csv')
 df.head(15)
 #%%
@@ -37,14 +48,18 @@ classifier.move_emails(mail, df)
 
 
 url = 'http://www.ifre.com/bobs-big-bet-barclays-purchase-of-lehman-brothers-10-years-later/21356030.fullarticle'
-
+url = ' https://kreviewer.com/2018/08/10/motco-lowered-its-amphenol-aph-holding-indexiq-advisors-increased-evercore-evr-stake-by-496422/'
 hdr = {'User-Agent': 'Mozilla/5.0'}
 
-try:
-    page = requests.get(url).text
-    soup = BeautifulSoup(page, 'lxml')  # creates a BS4 object
-except:
-    print('asfd')
+
+page = requests.get(url).text
+soup = BeautifulSoup(page, 'lxml')  # creates a BS4 object
+words = []
+for paragraph in soup.find_all('p'):
+    words += paragraph.text.split()
+print('success')
+
+# scraper.get_text_from_url(url, clean=False)
 
 # try:
 #     r = requests.get(url, timeout=10.0)

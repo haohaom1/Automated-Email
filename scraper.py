@@ -13,6 +13,7 @@ import ast
 import ssl
 import threading_timer
 from datetime import datetime
+import requests
 
 # ## Scrapes data off of website
 
@@ -31,7 +32,7 @@ class Scraper:
         self.num_features = 3  # determines the number of features to use
 
     # @threading_timer.exit_after(60)
-    def get_text_from_url(self, url, clean=True):
+    def get_text_from_url(self, url, clean=True, include_url=True):
         hdr = {'User-Agent': 'Mozilla/5.0'}
 
         try:
@@ -40,10 +41,13 @@ class Scraper:
             #     html = html.read()
             # bs = BeautifulSoup(html, "lxml")
 
-            req = Request(url, headers=hdr)
-            with urlopen(req) as page:
-                page = page.read()
+            page = requests.get(url).text
             soup = BeautifulSoup(page, 'lxml')  # creates a BS4 object
+
+            # req = Request(url, headers=hdr)
+            # with urlopen(req) as page:
+            #     page = page.read()
+            # soup = BeautifulSoup(page, 'lxml')  # creates a BS4 object
 
             words = []
             for paragraph in soup.find_all('p'):
@@ -53,15 +57,20 @@ class Scraper:
                 words = [''.join(c.lower() for c in s if c not in string.punctuation) for s in
                          words]  # strip punctuaions and lower cases words
 
+            if include_url:
+                words = words + ['\nLink: {}'.format(url)]
+
             return words
 
         # suspicious website
         except ssl.CertificateError:
-            return ''
+            warnings.warn('Suspect website')
+            return None
 
         except ValueError:
             warnings.warn('Make sure the Dataframe passed has been cleaned. Use Scraper.clean_urls() '
                              'on the dataframe to clean it')
+            return None
 
     # strip punctuations and lower case from a string
     def clean_words(self, string_words):
@@ -228,7 +237,7 @@ class Scraper:
                     return words
                 list_of_words.append(words)
 
-            except:# (URLError, HTTPError, KeyboardInterrupt, TimeoutError) as error:
+            except:
                 warnings.warn('Unable to load {}'.format(url))
                 # print(error)
                 if split_up_links:
