@@ -30,7 +30,7 @@ I also built a GUI that displays the models:
 
 
 <div style="display: block; float: left">
-      <img src="visualization/GUI.png" width="250" height="250"> 
+      <img src="visualization/GUI.png" width="400" height="250"> 
 </div>
 
 
