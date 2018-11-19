@@ -26,7 +26,12 @@ After retrieving the words from the article,  I devised three scoring metrics:
 
 ### Frontend GUI
 
-I also built a GUI that displays the models 
+I also built a GUI that displays the models:
+
+
+<div style="display: block; float: left">
+      <img src="visualization/GUI.png" width="250" height="250"> 
+</div>
 
 
 ## Future Endeavors
