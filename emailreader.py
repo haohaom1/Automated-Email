@@ -137,8 +137,12 @@ class Emailreader:
         fnames = [name.split()[0] for name in names]
         lnames = [name.split()[-1] for name in names]
 
-        df = pd.DataFrame(np.column_stack([fnames, lnames, list_of_urls, ids]),
-                          columns=['first_name', 'last_name', 'url', 'id'])
+        # print('fname', fnames, 'lname', lnames, 'list', list_of_urls, 'ids', ids)
+        #         # print(np.column_stack([fnames, lnames, list_of_urls, ids]))
+
+        df = pd.DataFrame(np.column_stack([fnames, lnames, ids]),
+                          columns=['first_name', 'last_name', 'id'])
+        df['url'] = list_of_urls
         return df
 
 

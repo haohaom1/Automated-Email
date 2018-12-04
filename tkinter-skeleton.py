@@ -11,12 +11,12 @@
 '''
 TO DO LIST
 
-- Find solution to move emails consitantly with a uid
-- Change the algorithm so that it has to be in separate words, and not in the string
+
 - Record whether the user chose to automatically move all emails in raiser CSV function: have two booleans
 move and move email: Set the column to move and only move emails if both are true
 - Add arrow keys as shortcut in table
 - When moving emails, concatenate emails based on their id and process each situation accordingly
+- Be able to sort by confidence amongst others
 
 IDEAS FOR FUTURE
 
@@ -25,7 +25,7 @@ IDEAS FOR FUTURE
     - idea 2: rotate IP addresses, delay scrape time
 - optimize retrieving data (maybe line by line) so a crash wont lose all the data
 - Add a waiting animation when Classifying Emails
-
+- Find solution to move emails consitantly with a uid
 
 TO SWITCH FROM WINDOWS AND MAC
 
@@ -417,6 +417,7 @@ class DisplayApp:
         '''
         passes in the current selected treeview row to display the score table
         '''
+        print(curItem)
         row_num = self.tree.item(curItem)['text']
         scores = self.df[['Occupation score', 'Occupation score adjusted', 'Colby score']].iloc[row_num]
 
@@ -664,9 +665,11 @@ class DisplayApp:
         raiser_df, merged_df = classifier.create_csv_for_raiser(logs=self.current_log, return_merged_df=True)
 
         if raiser_df.empty:
-            # No available data
-            messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge')
-            classifier.move_emails(mail, df=self.df)    # moves all emails to received
+            # No available data --> Either all data are received, or all move are set to False
+            messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge, moving all to Received')
+            df = self.df[self.df['moved'] == 'True']
+            if not df.empty:
+                classifier.move_emails(mail, df=self.df)    # moves all emails to received
             return
 
         d = RaiserDialog(self.root, df=merged_df, merged_df=True, main_df=self.df, title='Raiser Edge CSV')
@@ -803,14 +806,6 @@ class DisplayApp:
     def moveAll(self, event=None):
         self.df['moved'] = 'True'
         self.buildBottomTable()
-
-
-    def exportEmails(self, event=None):
-        '''
-        Changes all the 'moved' section to True, ready to be exported to Raiser's Edge and moved
-        '''
-
-        self.df['moved'] = True
 
     def updateTable(self, event=None):
         '''
