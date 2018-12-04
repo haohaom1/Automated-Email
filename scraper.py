@@ -55,10 +55,11 @@ class Scraper:
 
             if clean:
                 words = [''.join(c.lower() for c in s if c not in string.punctuation) for s in
-                         words]  # strip punctuaions and lower cases words
+                         words]  # strip punctuations and lower cases words
 
             if include_url:
-                words = words + ['\nLink: {}'.format(url)]
+                if words:       # only includes the link if there are words present
+                    words = words + ['\nLink: {}'.format(url)]
 
             return words
 
@@ -155,15 +156,13 @@ class Scraper:
 
     # return: score, adjusted score
     def occupation_score(self, keys, words):
-        # vec = CountVectorizer()
-        # vec.fit_transform(keys)
-        # score = vec.transform(words).toarray().sum()
         words = self.clean_words(' '.join(words))
+        words = words.split()
         score = sum([words.count(key) for key in keys])
-
         adj_score = score / len(keys)
-        return score, adj_score
 
+        # print('scores', score, adj_score)
+        return score, adj_score
 
     # params: words - list of all relevant words scraped from the website
     # return: the number of times colby college appeared
@@ -354,7 +353,7 @@ class Scraper:
                 scores[row, :] = score
                 args[row, :] = arg
 
-        # print('score', scores)
+        print('score in score all urls', scores)
 
         if sum_array:
             maxarg = np.argmax(np.sqrt(np.square(scores).sum(1)))
@@ -395,6 +394,7 @@ class Scraper:
         urls = []
         constituent_id = []
 
+
         for i in range(len(df)):
             print('processing link {}'.format(i))
 
@@ -402,9 +402,13 @@ class Scraper:
 
             mdf = self.create_matched_df(current_row['first_name'], current_row['last_name'])
 
+            # print('scoring urls right now')
+
             # kill this function if it's running for too long
             s, arg = self.score_all_urls(words=current_row['text'], matched_df=mdf, sum_array=True,
                                          links_split_up=split_up_links)
+
+            # print('scores', s)
 
             scores.append((s[0], s[1], s[2]))
             args.append(arg)
@@ -418,8 +422,7 @@ class Scraper:
                 c_id = np.NAN
             constituent_id.append(c_id)
 
-
-        assert(len(df) == len(scores))  # verifies that the length of each are the same
+        # assert(len(df) == len(scores))  # verifies that the length of each are the same
 
         # add lists of urls if we didn't split up links
         if not split_up_links:
@@ -429,6 +432,9 @@ class Scraper:
         # adds the scores
         df[['Occupation score', 'Occupation score adjusted', 'Colby score']] = pd.DataFrame(scores, index=df.index)
         df['constituent_id'] = constituent_id
+
+        print(df)
+        print('finished adding scores')
 
         # if given a label (for training) add label as a column
         if label:

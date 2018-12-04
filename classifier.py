@@ -128,6 +128,8 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
 
     scores_df = scraper.create_scores_data(links, split_up_links=True)
 
+    print('finished scores data')
+
     invalids = scores_df[scores_df['Colby score'].isnull()]
     if move:
         for uid in invalids['id']:
@@ -158,6 +160,7 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
     # documents the mail source
     df['folder'] = folder
 
+    print('finished adding extra stuff to dataframe')
 
     # sorts df by probability
     # df.sort_values(['proba'], inplace=True)
@@ -184,6 +187,7 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
             if log_filename:
                 return df, '{}_logs.csv'.format(date)
 
+    print('finished classifying')
     return df
 
 
@@ -233,6 +237,7 @@ def create_csv_for_raiser(logs=None, df=None, return_merged_df=False):
                                                              lname=row['last_name'],
                                                              arg=row['arg']),
                                  axis=1).values.tolist()
+    df['move/status change (or n/a)'] = 'N/A'
 
     headers = headers + ['description', 'text', 'constituent_id']
     raisers_df = df.loc[:, headers]
