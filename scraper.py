@@ -25,7 +25,7 @@ class Scraper:
 
         try:
             path = 'datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv'
-            self.constituents_df = pd.read_csv(path, index_col=0, low_memory=False)
+            self.constituents_df = pd.read_csv(path, low_memory=False)
         except FileNotFoundError:
             warnings.warn('unable to find Constituents data. Please use set_constituents_path to locate the datafile')
 
@@ -433,7 +433,6 @@ class Scraper:
         df[['Occupation score', 'Occupation score adjusted', 'Colby score']] = pd.DataFrame(scores, index=df.index)
         df['constituent_id'] = constituent_id
 
-        print(df)
         print('finished adding scores')
 
         # if given a label (for training) add label as a column

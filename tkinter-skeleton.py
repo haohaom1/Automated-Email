@@ -319,8 +319,14 @@ class DisplayApp:
         # binds the logs listbox to onselect
         self.logs_lbox.bind('<<ListboxSelect>>', self.onselect)
 
-        # binds double click to bottom table
+        # binds double click to doubleClick function
         self.root.bind('<Double-Button-1>', self.doubleClick)
+
+        # binds left click to handleLeftMouseClick function
+        self.root.bind('<Button-1>', self.handleLeftMouseClick)
+
+        # binds right click to mousebutton2 function
+        self.root.bind('<Button-3>', self.handleRightMouseClick)
 
         # binds control-e to switch the label of an element in the bottom table
         self.bottomFrame.bind('<Control-e>', self.switchLabel)
@@ -332,7 +338,6 @@ class DisplayApp:
         print('Terminating')
         self.root.destroy()
 
-
 ################################ Build Tables and Graphs to Display ############################
 
     def buildBottomTable(self):
@@ -342,6 +347,8 @@ class DisplayApp:
 
         # delete previous tables, if ones exist
         self.refreshFrame(self.bottomFrame)
+        # this isn't necessary, only to prevent left shifting of the main frames
+        self.refreshFrame(self.rightmainframe)
 
         self.tree = ttk.Treeview(self.bottomFrame)
 
@@ -376,11 +383,14 @@ class DisplayApp:
             string = string[:total_string_size]
             return '\n'.join(textwrap.wrap(string, length)) + '...'
 
+        # dictionary that shortens the long names from the main to display them on the treeview
+        self.tree_column_shortened = {'first_name': 'first',
+                                       'last_name': 'last',
+                                       'time': 'date',
+                                       'constituent_id': 'id'}
+
         # preprocesses the dataframe
-        df = df.rename(index=int, columns={'first_name': 'first',
-                                           'last_name': 'last',
-                                           'time': 'date',
-                                           'constituent_id': 'id'})  # make the columns shorter
+        df = df.rename(index=int, columns=self.tree_column_shortened)  # make the columns shorter
         df['text'] = df['text'].apply(process_text)    # limits the characters in the text column
         df['confidence'] = df['confidence'].apply(lambda x: np.around(x, 3))    # rounds the confidence
         df['date'] = df['date'].apply(lambda x: x.split()[0])       # only shows the date and not the time
@@ -417,7 +427,6 @@ class DisplayApp:
         '''
         passes in the current selected treeview row to display the score table
         '''
-        print(curItem)
         row_num = self.tree.item(curItem)['text']
         scores = self.df[['Occupation score', 'Occupation score adjusted', 'Colby score']].iloc[row_num]
 
@@ -538,7 +547,6 @@ class DisplayApp:
     def onselect(self, event):
         w = event.widget
 
-
         # for when the logs listbox is selected
         if w == self.logs_lbox:
             try:
@@ -563,6 +571,7 @@ class DisplayApp:
 
         # for when the bottom table is selected
         elif w == self.tree:
+
             self.refreshFrame(self.rightmainframe)
 
             # displays the scores graph
@@ -583,17 +592,49 @@ class DisplayApp:
             # builds the label that displays the constituent's occupation
             self.buildOccsLabel(curItem)
 
-
-    def doubleClick(self, event):
+    def handleLeftMouseClick(self, event=None):
         w = event.widget
+        x, y = event.x, event.y
 
-        if w == self.tree:
+        # if the user left clicks the heading of a tree -> sort it by that order
+        if w == self.tree and self.tree.identify_region(x, y) == 'heading':
+            self.sort_dataframe(x, ascending=True)
+
+    def handleRightMouseClick(self, event=None):
+        w = event.widget
+        x, y = event.x, event.y
+
+        print(w, self.tree.identify_region(x, y))
+        # if the user left clicks the heading of a tree -> sort it by that order
+        if w == self.tree and self.tree.identify_region(x, y) == 'heading':
+            self.sort_dataframe(x, ascending=False)
+
+    def doubleClick(self, event=None):
+        w = event.widget
+        x, y = event.x, event.y
+
+        # Double click to access a link inside the bottom_tree widget
+        if w == self.tree and self.tree.identify_region(x, y) == 'cell':
             print('double clicked')
 
             # selects scores from the current row
             curItem = self.tree.focus()
 
             self.openUrl(curItem)
+
+
+    # sorts the dataframe by the column name
+    # prereq: the user clicked a heading on self.tree
+    def sort_dataframe(self, mouseX, ascending):
+        label = self.tree.heading(self.tree.identify_column(mouseX))['text']
+
+        # if a value is shortened, unshorten it by finding the key of the shortened dictionary
+        for k, v in self.tree_column_shortened.items():
+            if label == v:
+                label = k
+
+        self.df = self.df.sort_values([label], ascending=ascending).reset_index(drop=True)
+        self.buildBottomTable()
 
     # opens the url of the current item from
     def openUrl(self, curItem):
