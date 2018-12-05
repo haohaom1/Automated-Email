@@ -42,6 +42,11 @@ I have been doing personal studies on Natural language processin, which hopefull
 
 Beta version completed
 
+12-5-18
+
+- Added sorting capabilities onto dataframe
+- changed master df to not have extra indexCol anymore
+
 Version 1.2.0
 
 WINDOWS VERSION
