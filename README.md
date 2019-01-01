@@ -38,7 +38,7 @@ I also built a GUI that displays the models:
 
 I have been doing personal studies on Natural language processin, which hopefully I can incorporate into this project to increase the accuaracy.
 
-#ChangeLogs
+# ChangeLogs
 
 Beta version completed
 
