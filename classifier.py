@@ -157,6 +157,11 @@ def classify_mails(mail, folder, clf=None, cap_at=None, latest_first=True, thres
     # IF TIME PERMITTED USE WORDS FROM THE START TO BE MORE EFFICIENT
     df['text'] = df['url'].apply(lambda x: ' '.join(scraper.get_text_from_url(x, clean=False, include_url=True)))
 
+    # clean the text using regex
+    exceptions = '@&.,:/;! \'\$\"\?\-'
+    regex_pat = '[^\w' + exceptions + ']+'
+    df['text'] = df['text'].str.replace(regex_pat, '').apply(lambda x: x.lstrip())
+
     # documents the mail source
     df['folder'] = folder
 

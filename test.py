@@ -22,6 +22,13 @@ import requests
 
 
 ##%%
+
+#%%
+import os
+import sys
+os.path.dirname(sys.executable)
+
+#%%
 scraper = Scraper()
 reader = Emailreader()
 username = 'prospectstudent@colby.edu'

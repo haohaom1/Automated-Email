@@ -708,7 +708,7 @@ class DisplayApp:
         if raiser_df.empty:
             # No available data --> Either all data are received, or all move are set to False
             messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge, moving all to Received')
-            df = self.df[self.df['moved'] == 'True']
+            df = self.df[self.df['moved']]
             if not df.empty:
                 classifier.move_emails(mail, df=self.df)    # moves all emails to received
             return
@@ -759,7 +759,6 @@ class DisplayApp:
         except AttributeError:  # if the user pressed cancel
             pass
 
-        pass
 
     def handleArchive(self):
         '''
