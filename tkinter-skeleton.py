@@ -11,11 +11,12 @@
 '''
 TO DO LIST
 
-- Add functionality that allows emails to be moved
-- Fix Pathing Error in Windows
-- Debug functionalities on Windows machines, such as key binds, etc
-- Add a waiting animation when Classifying Emails
-- fix bug of why i cant just classify 1 mail
+
+- Record whether the user chose to automatically move all emails in raiser CSV function: have two booleans
+move and move email: Set the column to move and only move emails if both are true
+- Add arrow keys as shortcut in table
+- When moving emails, concatenate emails based on their id and process each situation accordingly
+- Be able to sort by confidence amongst others
 
 IDEAS FOR FUTURE
 
@@ -23,6 +24,12 @@ IDEAS FOR FUTURE
     - idea 1: create a separate bot that identifies whether an article is
     - idea 2: rotate IP addresses, delay scrape time
 - optimize retrieving data (maybe line by line) so a crash wont lose all the data
+- Add a waiting animation when Classifying Emails
+- Find solution to move emails consitantly with a uid
+
+TO SWITCH FROM WINDOWS AND MAC
+
+- look up pathlib in classifier
 
 BEFORE USING
 
@@ -162,14 +169,14 @@ class DisplayApp:
         # the first sublist is the set of items for the file menu
         # the second sublist is the set of items for the option menu
         menutext = [['Update Current Table', 'score', 'Quit  Ctl-Q'],
-                    ['Clear', 'Switch Label Ctrl-e', '-']]
+                    ['Clear', 'Switch Label Ctrl-e', 'Switch Moved State Ctrl-w']]
 
         # menu callback functions (note that some are left blank,
         # so that you can add functions there if you want).
         # the first sublist is the set of callback functions for the file menu
         # the second sublist is the set of callback functions for the option menu
         menucmd = [[self.updateTable, self.handleViewScore, self.handleQuit],
-                   [self.clear, self.switchLabel, None]]
+                   [self.clear, self.switchLabel, self.switchMovedState]]
 
         # build the menu elements and callbacks
         for i in range(len(menulist)):
@@ -262,13 +269,22 @@ class DisplayApp:
                                command=com)
             button.pack(side=tk.TOP)
 
-        # creates listbox
-        self.logs_lbox = tk.Listbox(rightcntlframe, selectmode=tk.SINGLE, name='logs_listbox')
+        # creates listbox frame
+        lbox_frame = tk.Frame(rightcntlframe)
+        lbox_frame.pack(side=tk.TOP, fill=tk.X)
+        self.logs_lbox = tk.Listbox(lbox_frame, selectmode=tk.SINGLE, name='logs_listbox')
+        self.logs_lbox.pack(side=tk.LEFT, pady=10)
+
         all_logs = sorted(os.listdir('logs/'), reverse=True)    # makes sure the most recent log is first
         for filename in all_logs:
             if filename.endswith('csv'):
                 self.logs_lbox.insert(tk.END, filename)
-        self.logs_lbox.pack(side=tk.TOP, pady=10)
+
+        # attaches a scrollbar
+        sc = tk.Scrollbar(lbox_frame)
+        sc.pack(side=tk.RIGHT, fill=tk.Y)
+
+        sc.config(command=self.logs_lbox.yview)
 
 
     def buildMainPanel(self):
@@ -298,20 +314,29 @@ class DisplayApp:
         # bind command sequences to the root window
         self.root.bind('<Control-q>', self.handleQuit)
 
+        self.root.bind('<Control-s>', self.updateTable)
+
         # binds the logs listbox to onselect
         self.logs_lbox.bind('<<ListboxSelect>>', self.onselect)
 
-        # binds double click to bottom table
+        # binds double click to doubleClick function
         self.root.bind('<Double-Button-1>', self.doubleClick)
+
+        # binds left click to handleLeftMouseClick function
+        self.root.bind('<Button-1>', self.handleLeftMouseClick)
+
+        # binds right click to mousebutton2 function
+        self.root.bind('<Button-3>', self.handleRightMouseClick)
 
         # binds control-e to switch the label of an element in the bottom table
         self.bottomFrame.bind('<Control-e>', self.switchLabel)
+        self.bottomFrame.bind('<Control-w>', self.switchMovedState)
+        self.bottomFrame.bind('<Control-a>', self.moveAll)
 
 
     def handleQuit(self, event=None):
         print('Terminating')
         self.root.destroy()
-
 
 ################################ Build Tables and Graphs to Display ############################
 
@@ -322,6 +347,8 @@ class DisplayApp:
 
         # delete previous tables, if ones exist
         self.refreshFrame(self.bottomFrame)
+        # this isn't necessary, only to prevent left shifting of the main frames
+        self.refreshFrame(self.rightmainframe)
 
         self.tree = ttk.Treeview(self.bottomFrame)
 
@@ -356,11 +383,14 @@ class DisplayApp:
             string = string[:total_string_size]
             return '\n'.join(textwrap.wrap(string, length)) + '...'
 
+        # dictionary that shortens the long names from the main to display them on the treeview
+        self.tree_column_shortened = {'first_name': 'first',
+                                       'last_name': 'last',
+                                       'time': 'date',
+                                       'constituent_id': 'id'}
+
         # preprocesses the dataframe
-        df = df.rename(index=int, columns={'first_name': 'first',
-                                           'last_name': 'last',
-                                           'time': 'date',
-                                           'constituent_id': 'id'})  # make the columns shorter
+        df = df.rename(index=int, columns=self.tree_column_shortened)  # make the columns shorter
         df['text'] = df['text'].apply(process_text)    # limits the characters in the text column
         df['confidence'] = df['confidence'].apply(lambda x: np.around(x, 3))    # rounds the confidence
         df['date'] = df['date'].apply(lambda x: x.split()[0])       # only shows the date and not the time
@@ -383,10 +413,15 @@ class DisplayApp:
             self.tree.insert('', i, text=i, values=tuple(row), tag=shaded)
 
         self.tree.tag_configure('even_row', background='lightgrey')
-        self.tree.pack(fill=tk.X, padx=5, pady=5)
+        self.tree.pack(fill=tk.X, side='left', expand=1)
 
         # binds Button1 to the tree
         self.tree.bind('<<TreeviewSelect>>', self.onselect)
+
+        # adds scrollbar to the tree
+        vsb = ttk.Scrollbar(self.bottomFrame, orient="vertical", command=self.tree.yview)
+        vsb.pack(side='right', fill=tk.Y)
+        self.tree.configure(yscrollcommand=vsb.set)
 
     def buildScoresTable(self, curItem):
         '''
@@ -512,7 +547,6 @@ class DisplayApp:
     def onselect(self, event):
         w = event.widget
 
-
         # for when the logs listbox is selected
         if w == self.logs_lbox:
             try:
@@ -525,6 +559,9 @@ class DisplayApp:
                 self.refreshFrame(self.rightmainframe)
                 self.refreshFrame(self.leftmainframe)
 
+                # displays the confidence
+                self.handleViewScore()
+
                 # builds table
                 self.buildBottomTable()
 
@@ -534,6 +571,7 @@ class DisplayApp:
 
         # for when the bottom table is selected
         elif w == self.tree:
+
             self.refreshFrame(self.rightmainframe)
 
             # displays the scores graph
@@ -554,17 +592,49 @@ class DisplayApp:
             # builds the label that displays the constituent's occupation
             self.buildOccsLabel(curItem)
 
-
-    def doubleClick(self, event):
+    def handleLeftMouseClick(self, event=None):
         w = event.widget
+        x, y = event.x, event.y
 
-        if w == self.tree:
+        # if the user left clicks the heading of a tree -> sort it by that order
+        if w == self.tree and self.tree.identify_region(x, y) == 'heading':
+            self.sort_dataframe(x, ascending=True)
+
+    def handleRightMouseClick(self, event=None):
+        w = event.widget
+        x, y = event.x, event.y
+
+        print(w, self.tree.identify_region(x, y))
+        # if the user left clicks the heading of a tree -> sort it by that order
+        if w == self.tree and self.tree.identify_region(x, y) == 'heading':
+            self.sort_dataframe(x, ascending=False)
+
+    def doubleClick(self, event=None):
+        w = event.widget
+        x, y = event.x, event.y
+
+        # Double click to access a link inside the bottom_tree widget
+        if w == self.tree and self.tree.identify_region(x, y) == 'cell':
             print('double clicked')
 
             # selects scores from the current row
             curItem = self.tree.focus()
 
             self.openUrl(curItem)
+
+
+    # sorts the dataframe by the column name
+    # prereq: the user clicked a heading on self.tree
+    def sort_dataframe(self, mouseX, ascending):
+        label = self.tree.heading(self.tree.identify_column(mouseX))['text']
+
+        # if a value is shortened, unshorten it by finding the key of the shortened dictionary
+        for k, v in self.tree_column_shortened.items():
+            if label == v:
+                label = k
+
+        self.df = self.df.sort_values([label], ascending=ascending).reset_index(drop=True)
+        self.buildBottomTable()
 
     # opens the url of the current item from
     def openUrl(self, curItem):
@@ -633,14 +703,17 @@ class DisplayApp:
             messagebox.showwarning('Warning', 'Please select or create a valid log')
             return
 
-        raiser_df = classifier.create_csv_for_raiser(logs=self.current_log, return_merged_df=False)
+        raiser_df, merged_df = classifier.create_csv_for_raiser(logs=self.current_log, return_merged_df=True)
 
         if raiser_df.empty:
-            # No available data
-            messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge')
+            # No available data --> Either all data are received, or all move are set to False
+            messagebox.showwarning('Warning', 'No data available to export to Raiser\'s Edge, moving all to Received')
+            df = self.df[self.df['moved'] == 'True']
+            if not df.empty:
+                classifier.move_emails(mail, df=self.df)    # moves all emails to received
             return
 
-        d = RaiserDialog(self.root, df=raiser_df, title='Raiser Edge CSV')
+        d = RaiserDialog(self.root, df=merged_df, merged_df=True, main_df=self.df, title='Raiser Edge CSV')
 
     def handleConfidence(self):
         if self.df is None:
@@ -744,47 +817,38 @@ class DisplayApp:
     def switchMovedState(self, event=None):
 
         # verifies that the user wants to switch states
-        result = tk.messagebox.askquestion('', 'Are you sure you want to change the state?')
-        if result == 'yes':
+        # result = tk.messagebox.askquestion('', 'Are you sure you want to change the state?')
+        # if result == 'yes':
 
-            label_col = 6  # this is the column number for labels
+        label_col = 6  # this is the column number for labels
 
-            curItem = self.tree.focus()
+        curItem = self.tree.focus()
 
-            # if nothing is currently selected
-            if not curItem:
-                return
+        # if nothing is currently selected
+        if not curItem:
+            return
 
-            row_num = self.tree.item(curItem)['text']  # the row number in the treeview
-            row_values = self.tree.item(curItem)['values']  # the values of that row
+        row_num = self.tree.item(curItem)['text']  # the row number in the treeview
+        row_values = self.tree.item(curItem)['values']  # the values of that row
 
-            orig_value = row_values[label_col]  # the predicted label of selected row
-            new_label = not orig_value  # the updated label (either True or False)
+        orig_value = row_values[label_col]  # the predicted label of selected row
+        # print('value', orig_value, type(orig_value))
+        new_label = 'False' if orig_value == 'True' else 'True'  # the updated label (either True or False)
+        # print('new label', new_label)
 
-            row_values[label_col] = new_label  # the new label of
-            shaded = 'even_row' if row_num % 2 == 0 else 'odd_row'  # whether or not to shade the tree row
-            self.tree.delete(curItem)
-            self.tree.insert('', row_num, text=row_num, values=row_values, tag=shaded)
+        row_values[label_col] = new_label  # the new label of
+        shaded = 'even_row' if row_num % 2 == 0 else 'odd_row'  # whether or not to shade the tree row
+        self.tree.delete(curItem)
+        self.tree.insert('', row_num, text=row_num, values=row_values, tag=shaded)
 
-            self.df.ix[row_num, 'label'] = new_label  # updates the new value in the locally stored dataframe
+        self.df.ix[row_num, 'moved'] = new_label  # updates the new value in the locally stored dataframe
 
-        pass
+    # switches all the states from true to false
+    def moveAll(self, event=None):
+        self.df['moved'] = 'True'
+        self.buildBottomTable()
 
-    def moveMailsManually(self, event=None):
-        '''
-        The user has the option change the
-        :return:
-        '''
-
-        # asks the user to verify that they want to switch the mail
-        ### create dialog box
-
-        result = tk.messagebox.askquestion('', 'Are you sure?')
-        if result == 'yes':
-            # change the label on the cached table
-            pass
-
-    def updateTable(self):
+    def updateTable(self, event=None):
         '''
         Updates the self.df to the logs that are currently selected
         *** May make this automatic in the future ***
@@ -834,17 +898,35 @@ class CustomDialog(simpledialog.Dialog):
 # dialog box for displaying CSVs
 class RaiserDialog(simpledialog.Dialog):
 
-    def __init__(self, parent, csv_path=None, df=None, title='Title'):
+    def __init__(self, parent, csv_path=None, df=None, main_df=None, merged_df=False, title='Title'):
+        '''
 
-        preset_path = 'raisers_edge/' + datetime.strftime(datetime.now(), '%Y-%m-%d') + '_raiser.csv'
+        :param parent: parent widget
+        :param csv_path: the csv path of the raiser_df, optional
+        :param main_df: the entire dataframe, containing both received and completed data
+        :param df: the actual raiser df object
+        :param merged_df: whether or not the passed raiser_df is the merged version, or has already been processed already
+        :param title: title of this widget
+        '''
+
+        preset_path = 'raisers_edge/' + datetime.strftime(datetime.now(), '%Y-%m-%d %H.%M.%S') + '_raiser.csv'
         self.path = tk.StringVar(master=parent,
                                  value=preset_path,
                                  name='pathVar')    # path of raiser file to be exported
+
+        self.main_df = main_df      # df containing both received and completed data
 
         if df is None:
             self.df = pd.read_csv(csv_path)
         else:
             self.df = df
+
+        if merged_df:
+            self.merged_df = df
+
+            raiser_headers = ['constituent_id', 'date', 'move/status change (or n/a)', 'type',
+                              'author', 'description', 'text']
+            self.df = self.df.loc[:, raiser_headers].reset_index(drop=True)
 
         simpledialog.Dialog.__init__(self, parent, title)
 
@@ -852,36 +934,48 @@ class RaiserDialog(simpledialog.Dialog):
         ## Builds the Table to display the CSV
 
         # builds two different frames
-        top_frame = tk.Frame(master=master)
+        top_frame = tk.Frame(master=master)     # used to contain the table
         top_frame.pack(side=tk.TOP, fill=tk.X)
-        bottom_frame = tk.Frame(master=master)
+        bottom_frame = tk.Frame(master=master)  # used to contain the path
         bottom_frame.pack(side=tk.TOP)
         error_frame = tk.Frame(master=master)
         error_frame.pack(side=tk.BOTTOM)
 
-        values = self.df.values
 
-        # builds column and row names
-        for c, col_name in enumerate(self.df.columns, start=1):
-            tk.Label(top_frame, text=col_name).grid(row=0, column=c)
+        # preprocesses the dataframe for displaying
+        df = self.df.rename(index=int, columns={'constituent_id': 'id'})  # make the columns shorter
+        df['text'] = self.df['text'].apply(lambda x: x[:min(len(x), 150)])  # limits the characters in the text column
 
-        for r, index_name in enumerate(self.df.index, start=1):
-            tk.Label(top_frame, text=index_name).grid(row=r, column=0)
+        # # builds column and row names
+        tree = ttk.Treeview(top_frame)
+        num_col = len(df.columns)
+        tree['columns'] = tuple(range(num_col))
+        for i, col in enumerate(self.df.columns):
+            # give extra width to text
+            width = 300 if col == 'text' else 110
+            stretch = col == 'text'
 
-        # adds the values
+            tree.column(i, width=width, minwidth=0, stretch=stretch)
+            tree.heading(i, text=col)
 
-        for i, val_row in enumerate(values, start=1):
-            for j, val in enumerate(val_row, start=1):
+        # builds the contents of the table
+        for i, row in df.iterrows():
+            shaded = 'even_row' if i % 2 == 0 else 'odd_row'
+            tree.insert('', i, text=i, values=tuple(row), tag=shaded)
 
-                # reformat the string if it is the text column
-                if isinstance(val, str):
-                    val = val[:40] + '...'
-                tk.Label(top_frame, text=val).grid(row=i, column=j)
+        tree.tag_configure('even_row', background='lightgrey')
+        tree.pack(fill=tk.X, side='left', expand=1)
 
+        # adds scrollbar to the tree
+        vsb = ttk.Scrollbar(top_frame, orient="vertical", command=tree.yview)
+        vsb.pack(side='right', fill=tk.Y)
+        tree.configure(yscrollcommand=vsb.set)
+
+        # makes the index column smaller
+        tree.column("#0", width=50)
 
         label = tk.Label(bottom_frame, text='Path: ')
         label.pack(side=tk.LEFT)
-
 
         e = tk.Entry(bottom_frame, textvariable=self.path, exportselection=0, width=35)
         e.pack(side=tk.LEFT)
@@ -890,6 +984,7 @@ class RaiserDialog(simpledialog.Dialog):
                                    fg='red', font='Helvetica 10 italic')
         self.errorlabel.pack(side=tk.BOTTOM)
         self.errorlabel.pack_forget()
+
 
     def buttonbox(self):
         '''
@@ -911,6 +1006,7 @@ class RaiserDialog(simpledialog.Dialog):
     def validate(self):
         try:
             if self.path.get()[-4:] == '.csv':
+
                 return True
             else:
                 self.errorlabel.pack()
@@ -928,6 +1024,10 @@ class RaiserDialog(simpledialog.Dialog):
         self.df.to_csv(self.path.get(), index=False)
         print('downloaded at ', self.path.get())
 
+        # moves the emails as well
+        classifier.move_emails(mail=mail, df=self.main_df)
+        # print(self.main_df)
+        print('finished moving emails')
 
 class ClassifyDialog(simpledialog.Dialog):
 
@@ -935,7 +1035,12 @@ class ClassifyDialog(simpledialog.Dialog):
 
         self.folder = tk.StringVar(value='Priority Mail')
         self.cap_at = tk.IntVar(value=0)
-        self.cap_at.set(0)
+
+        # whether or not the user wants to automate or manually sort through emails
+        self.checked = tk.IntVar(value=0)
+
+        # threshold if user wants to autmate things
+        self.threshold = tk.DoubleVar(value=.9)
 
         simpledialog.Dialog.__init__(self, parent, title)
 
@@ -950,7 +1055,7 @@ class ClassifyDialog(simpledialog.Dialog):
         def callback(*args):
             try:
                 t = self.cap_at.get()
-                waitTime.set('Approx. Wait Time: {:.0f} mins'.format(np.ceil(t / 8)))  # approx wait time
+                waitTime.set('Approx. Wait Time: {:.0f} mins'.format(np.ceil(t / 4)))  # approx wait time
 
             # this is a bug with tkinter, so i'm going to catch this exception
             except tk.TclError:
@@ -971,29 +1076,45 @@ class ClassifyDialog(simpledialog.Dialog):
         # updates the wait time accordingly
         self.cap_at.trace_add('write', callback)
 
-    def validate(self):
-        # if self.checked.get() > 0:
-        #     return True
-        # else:
-        #     return False
-        return True
+        def callback_checked(*args):
+            if self.checked.get() == 1:
+                threshold_lab.grid(row=4, column=0, sticky='nsew')
+                threshold_entry.grid(row=4, column=1, sticky='nsew')
+            else:
+                threshold_lab.grid_forget()
+                threshold_entry.grid_forget()
 
+        # tk.Label(master, text='Automate Emails?').grid(row=3, column=0)
+        checkbutton = tk.Checkbutton(master, text='Move Emails Automatically!',
+                                     variable=self.checked)
+        checkbutton.grid(row=3, column=0, sticky='nsew')
+
+        threshold_lab = tk.Label(master, text='Threshold (decimal from 0-1): ')
+        threshold_entry = tk.Entry(master, textvariable=self.threshold, width=3)
+
+        # add traceback to checkbutton
+        self.checked.trace_add('write', callback_checked)
+
+
+    def validate(self):
+        # makes sure the user chooses at least 1 email to classify
+        return True if self.cap_at.get() > 0 else False
 
     def apply(self):
 
         print('Classifying {} mails in the folder {}'.format(self.cap_at.get(), self.folder.get()))
 
-
+        move = self.checked.get() == 1
         # starts to classify emails
         _, self.filename = classifier.classify_mails(mail, folder=self.folder.get(),
                                                      cap_at=self.cap_at.get(), log_data=True,
                                                      to_raiser=False, log_filename=True,
-                                                     move=False, threshold=1.01)
+                                                     move=move, threshold=self.threshold.get())
 
         print('logs saved at' + self.filename)
 
 
 if __name__ == "__main__":
-    dapp = DisplayApp(1600, 800)
+    dapp = DisplayApp(1600, 900)
     dapp.main()
 

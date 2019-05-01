@@ -54,7 +54,7 @@ def a():
     print('a')
 
 
-@exit_after(2)
+@exit_after(3)
 def b():
     print('b')
     sleep(3)

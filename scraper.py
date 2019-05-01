@@ -7,14 +7,13 @@ from bs4 import BeautifulSoup
 from urllib.request import Request, urlopen
 import string
 import nltk
-from sklearn.feature_extraction.text import CountVectorizer
 import warnings
 from urllib.error import HTTPError, URLError
 import ast
-import signal
 import ssl
-from collections import Counter
-
+import threading_timer
+from datetime import datetime
+import requests
 
 # ## Scrapes data off of website
 
@@ -26,23 +25,29 @@ class Scraper:
 
         try:
             path = 'datasets/OrganizationRelationships_NickNamesAdded_5.24.2018.csv'
-            self.constituents_df = pd.read_csv(path, index_col=0, low_memory=False)
+            self.constituents_df = pd.read_csv(path, low_memory=False)
         except FileNotFoundError:
             warnings.warn('unable to find Constituents data. Please use set_constituents_path to locate the datafile')
 
         self.num_features = 3  # determines the number of features to use
 
-
-
-    def get_text_from_url(self, url, clean=True):
+    # @threading_timer.exit_after(60)
+    def get_text_from_url(self, url, clean=True, include_url=True):
         hdr = {'User-Agent': 'Mozilla/5.0'}
-        hdr['User-agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A'
 
         try:
 
-            req = Request(url, headers=hdr)
-            page = urlopen(req)
+            # with urlopen(url) as html:
+            #     html = html.read()
+            # bs = BeautifulSoup(html, "lxml")
+
+            page = requests.get(url).text
             soup = BeautifulSoup(page, 'lxml')  # creates a BS4 object
+
+            # req = Request(url, headers=hdr)
+            # with urlopen(req) as page:
+            #     page = page.read()
+            # soup = BeautifulSoup(page, 'lxml')  # creates a BS4 object
 
             words = []
             for paragraph in soup.find_all('p'):
@@ -50,17 +55,23 @@ class Scraper:
 
             if clean:
                 words = [''.join(c.lower() for c in s if c not in string.punctuation) for s in
-                         words]  # strip punctuaions and lower cases words
+                         words]  # strip punctuations and lower cases words
+
+            if include_url:
+                if words:       # only includes the link if there are words present
+                    words = words + ['\nLink: {}'.format(url)]
 
             return words
 
         # suspicious website
         except ssl.CertificateError:
-            return ''
+            warnings.warn('Suspect website')
+            return None
 
         except ValueError:
             warnings.warn('Make sure the Dataframe passed has been cleaned. Use Scraper.clean_urls() '
                              'on the dataframe to clean it')
+            return None
 
     # strip punctuations and lower case from a string
     def clean_words(self, string_words):
@@ -145,15 +156,13 @@ class Scraper:
 
     # return: score, adjusted score
     def occupation_score(self, keys, words):
-        # vec = CountVectorizer()
-        # vec.fit_transform(keys)
-        # score = vec.transform(words).toarray().sum()
         words = self.clean_words(' '.join(words))
+        words = words.split()
         score = sum([words.count(key) for key in keys])
-
         adj_score = score / len(keys)
-        return score, adj_score
 
+        # print('scores', score, adj_score)
+        return score, adj_score
 
     # params: words - list of all relevant words scraped from the website
     # return: the number of times colby college appeared
@@ -189,9 +198,7 @@ class Scraper:
         return scores, arg
 
 
-
     ## returns a dataframe of all people that match the first and last name
-
     def create_matched_df(self, fname, lname):
         df1 = self.constituents_df.loc[(self.constituents_df['FIRST'] == fname) & (self.constituents_df['LAST'] == lname)]
         df2 = self.constituents_df.loc[(self.constituents_df['NICKNAME'] == fname) & (self.constituents_df['LAST'] == lname)]
@@ -207,20 +214,12 @@ class Scraper:
         if split_up_links:
             urls = [urls]
 
-        # for handling when the function takes too long to respond
-        def handler(signum, frame):
-            warnings.warn("Unable to load website")
-            raise TimeoutError('Url took too long to load')
-
         list_of_words = []
 
         # urls is a 1D list of urls
         # returns a list of list of words
         for url in urls:
-
-            # terminates the function if it runs for more than 60 seconds
-            signal.signal(signal.SIGALRM, handler)
-            signal.alarm(60)
+            print('url', url)
 
             try:
                 words = self.get_text_from_url(url, clean=False)
@@ -237,17 +236,12 @@ class Scraper:
                     return words
                 list_of_words.append(words)
 
-            except (URLError, HTTPError, TimeoutError):
+            except:
                 warnings.warn('Unable to load {}'.format(url))
+                # print(error)
                 if split_up_links:
                     return None
                 list_of_words.append('')
-
-            # resets alarm
-            signal.alarm(0)
-
-        # urls is a list of list of urls, one list per email
-        # returns a list of list of list of words
 
         return list_of_words
 
@@ -313,7 +307,6 @@ class Scraper:
     #
     #     return list_of_words
 
-
     def score_all_urls(self, words, matched_df, sum_array=False, links_split_up=False):
         '''
 
@@ -360,7 +353,7 @@ class Scraper:
                 scores[row, :] = score
                 args[row, :] = arg
 
-        # print('score', scores)
+        print('score in score all urls', scores)
 
         if sum_array:
             maxarg = np.argmax(np.sqrt(np.square(scores).sum(1)))
@@ -401,6 +394,7 @@ class Scraper:
         urls = []
         constituent_id = []
 
+
         for i in range(len(df)):
             print('processing link {}'.format(i))
 
@@ -408,9 +402,13 @@ class Scraper:
 
             mdf = self.create_matched_df(current_row['first_name'], current_row['last_name'])
 
+            # print('scoring urls right now')
+
             # kill this function if it's running for too long
             s, arg = self.score_all_urls(words=current_row['text'], matched_df=mdf, sum_array=True,
                                          links_split_up=split_up_links)
+
+            # print('scores', s)
 
             scores.append((s[0], s[1], s[2]))
             args.append(arg)
@@ -424,8 +422,7 @@ class Scraper:
                 c_id = np.NAN
             constituent_id.append(c_id)
 
-
-        assert(len(df) == len(scores))  # verifies that the length of each are the same
+        # assert(len(df) == len(scores))  # verifies that the length of each are the same
 
         # add lists of urls if we didn't split up links
         if not split_up_links:
@@ -435,6 +432,8 @@ class Scraper:
         # adds the scores
         df[['Occupation score', 'Occupation score adjusted', 'Colby score']] = pd.DataFrame(scores, index=df.index)
         df['constituent_id'] = constituent_id
+
+        print('finished adding scores')
 
         # if given a label (for training) add label as a column
         if label:
