@@ -73,9 +73,14 @@ class Scraper:
                              'on the dataframe to clean it')
             return None
 
+        except requests.exceptions.ConnectionError as e:
+            warnings.warn('Cannont load website')
+            return None
+
     # strip punctuations and lower case from a string
     def clean_words(self, string_words):
         return string_words.lower().translate(str.maketrans('', '', string.punctuation))
+
 
     def get_text_with_nltk(self, url):
         hdr = {'User-Agent': 'Mozilla/5.0'}
